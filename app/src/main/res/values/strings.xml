@@ -1,0 +1,7 @@
+<resources>
+    <!--<string name=""></string>-->
+    <string name="app_name">Multitask</string>
+    <string name="bottom_first">Inicio</string>
+    <string name="bottom_second">Notas</string>
+    <string name="bottom_third">Tareas</string>
+</resources>
