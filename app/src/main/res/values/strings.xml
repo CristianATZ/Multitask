@@ -4,4 +4,12 @@
     <string name="bottom_first">Inicio</string>
     <string name="bottom_second">Notas</string>
     <string name="bottom_third">Tareas</string>
+    <string name="bottom_fourth">Ajustes</string>
+
+
+    // ajustes screen
+    <string name="settings_title">Configuracion</string>
+    <string name="settings_theme_title">Temas</string>
+    <string name="settings_color_title">Colores</string>
+    <string name="settings_language_title">Idioma</string>
 </resources>

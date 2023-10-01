@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import net.cristianzvl.multitask.AjusteScreen
 import net.cristianzvl.multitask.InicioScreen
 import net.cristianzvl.multitask.NotaScreen
 import net.cristianzvl.multitask.TareaScreen
@@ -12,7 +13,7 @@ import net.cristianzvl.multitask.TareaScreen
 fun NavigationHost(
     navHostController: NavHostController
 ) {
-    NavHost(navController = navHostController, startDestination = ItemsMenu.InicioScreen.route){
+    NavHost(navController = navHostController, startDestination = ItemsMenu.AjusteScreen.route){
         composable(route = ItemsMenu.NotaScreen.route){
             NotaScreen()
         }
@@ -23,6 +24,10 @@ fun NavigationHost(
 
         composable(route = ItemsMenu.TareaScreen.route){
             TareaScreen()
+        }
+
+        composable(route = ItemsMenu.AjusteScreen.route){
+            AjusteScreen()
         }
     }
 }
