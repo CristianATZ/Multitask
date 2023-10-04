@@ -104,8 +104,7 @@ fun PantallaPrincipal() {
     val scope = rememberCoroutineScope()
 
     Scaffold(
-        bottomBar = { BottomBarBody(navHostController,bottomNavItems) },
-        floatingActionButton = { FABody() }
+        bottomBar = { BottomBarBody(navHostController,bottomNavItems) }
     ) { paddingValues ->
         Surface(
             modifier = Modifier
@@ -116,21 +115,6 @@ fun PantallaPrincipal() {
         }
     }
 }
-
-@Composable
-fun FABody() {
-    FloatingActionButton(
-        onClick = {
-
-        }
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Add,
-            contentDescription = null
-        )
-    }
-}
-
 @Composable
 fun BottomBarBody(
     navHostController: NavHostController,
