@@ -13,7 +13,7 @@ import net.cristianzvl.multitask.TareaScreen
 fun NavigationHost(
     navHostController: NavHostController
 ) {
-    NavHost(navController = navHostController, startDestination = ItemsMenu.AjusteScreen.route){
+    NavHost(navController = navHostController, startDestination = ItemsMenu.NotaScreen.route){
         composable(route = ItemsMenu.NotaScreen.route){
             NotaScreen()
         }
