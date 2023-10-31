@@ -1,5 +1,7 @@
 package net.cristianzvl.multitask
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +29,7 @@ import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.Card
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -39,6 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,10 +52,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import net.cristianzvl.multitask.Model.Work
+import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
 
 data class TareasItem(
     val name: String,
@@ -60,52 +67,80 @@ data class TareasItem(
     val hour: String
 )
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun TareaScreen() {
-    val tareas_items = listOf(
-        TareasItem(
-            name = "Tarea gestion",
-            desc = "Hacer el punto 10, tablita de firmas o una mamada asi",
-            day = "27 Sep",
-            hour = "17:00"
-        ),
-        TareasItem(
-            name = "Ingles",
-            desc = "Hacer tarea de ingles pag. 61",
-            day = "28 Sep",
-            hour = "22:00"
-        )
-    )
+fun TareaScreen(multiViewModel: MultitaskViewModel) {
+    val multiUiState by multiViewModel.uiState.collectAsState()
 
-    Box {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-        ){
-            items(tareas_items.size){ index ->
-                val item = tareas_items[index]
-                TareaBody(item)
+    val tareas_items = multiUiState.works
+
+    Column(
+        Modifier.fillMaxSize()
+    ) {
+        TopBar()
+
+        Box {
+            if(multiUiState.countHomeworks > 0){
+                // notas
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                ){
+                    items(tareas_items.size){ index ->
+                        val item = tareas_items[index]
+                        TareaBody(item)
+                    }
+                }
+            } else {
+                // tip de notas
+                Column(
+                    Modifier
+                        .fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.tip_homeworks),
+                        style = typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth(0.6f)
+                    )
+                }
             }
+
+            FABody(multiViewModel)
         }
-        FABody()
     }
 }
 
-
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TopBar() {
+    CenterAlignedTopAppBar(
+        title = {
+            Text(text = stringResource(id = R.string.tareas_title))
+        }
+    )
+}
 
 @Composable
 private fun FABody(
-
+    multiViewModel: MultitaskViewModel
 ) {
     var tarea by remember {
         mutableStateOf(false)
     }
 
     if(tarea){
-        DialogAddTarea {
-            tarea = !tarea
-        }
+        DialogAddTarea(
+            multiViewModel = multiViewModel,
+            onClick = {
+                tarea = !tarea
+            }
+        )
     }
+
     Column(
         modifier = Modifier
             .fillMaxSize(),
@@ -130,7 +165,7 @@ private fun FABody(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TareaBody(
-    item: TareasItem
+    item: Work
 ) {
     var eliminar by remember {
         mutableStateOf(false)
@@ -162,7 +197,7 @@ private fun TareaBody(
                     .fillMaxWidth(0.7f)
             ) {
                 Text(
-                    text = item.name,
+                    text = item.title,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.titleMedium,
@@ -190,14 +225,14 @@ private fun TareaBody(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = item.day,
+                        text = "",
                         style = MaterialTheme.typography.bodySmall
                     )
 
                     Spacer(modifier = Modifier.size(8.dp))
 
                     Text(
-                        text = item.hour,
+                        text = "",
                         style = MaterialTheme.typography.labelSmall
                     )
                 }
@@ -209,8 +244,17 @@ private fun TareaBody(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DialogAddTarea(
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    multiViewModel: MultitaskViewModel
 ) {
+    var title by remember {
+        mutableStateOf("")
+    }
+
+    var nota by remember {
+        mutableStateOf("")
+    }
+
     Dialog(
         onDismissRequest = { /*TODO*/ },
         properties = DialogProperties(
@@ -275,9 +319,6 @@ private fun DialogAddTarea(
                 modifier = Modifier
                     .padding(PaddingValues(16.dp))
             ) {
-                var title by remember {
-                    mutableStateOf("")
-                }
 
                 OutlinedTextField(
                     value = title,
@@ -304,9 +345,6 @@ private fun DialogAddTarea(
             }
 
             // caja de texto de la descripcion de la nota
-            var nota by remember {
-                mutableStateOf("")
-            }
 
             Column(
                 modifier = Modifier
@@ -352,6 +390,7 @@ private fun DialogAddTarea(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.End
             ) {
+                // archivos
                 if(documentos){
                     IconButton(
                         onClick = { /*TODO*/ },
@@ -400,6 +439,7 @@ private fun DialogAddTarea(
                     }
                 }
 
+                // abrir archivos
                 IconButton(
                     onClick = { documentos = !documentos }
                 ) {
@@ -419,8 +459,15 @@ private fun DialogAddTarea(
 
                 Spacer(modifier = Modifier.size(16.dp))
 
+                // guardar tarea
                 IconButton(
                     onClick = {
+                        multiViewModel.addWork(
+                            Work(
+                                title,
+                                nota
+                            )
+                        )
                         onClick()
                     },
                     modifier = Modifier

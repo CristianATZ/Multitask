@@ -2,6 +2,7 @@ package net.cristianzvl.multitask
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
 
 
 data class themeItem(
@@ -42,17 +44,18 @@ data class idiomaItem(
 )
 
 @Composable
-fun AjusteScreen() {
+fun AjusteScreen(multiViewModel: MultitaskViewModel) {
+
     val theme_items = listOf(
         themeItem(
             name = "Claro",
             color = Color.White,
-            action = { }
+            action = { multiViewModel.changeTheme(false) }
         ),
         themeItem(
             name = "Oscuro",
             color = Color.Black,
-            action = { }
+            action = { multiViewModel.changeTheme(true) }
         )
     )
 
@@ -181,13 +184,13 @@ fun ColorsBody(
     Column(
         modifier = Modifier
             .padding(horizontal = 16.dp)
-    ) {
+    ) {/*
         Row(
             modifier = Modifier
                 .padding(vertical = 8.dp)
         ) {
             color_items1.forEach(){ item ->
-                BoxOption(color = item.color)
+                BoxOption(item)
                 Spacer(modifier = Modifier.size(16.dp))
             }
         }
@@ -196,21 +199,23 @@ fun ColorsBody(
                 .padding(vertical = 8.dp)
         ) {
             color_items2.forEach(){ item ->
-                BoxOption(color = item.color)
+                BoxOption(item)
                 Spacer(modifier = Modifier.size(16.dp))
             }
         }
         Row {
             color_items3.forEach(){ item ->
-                BoxOption(color = item.color)
+                BoxOption(item)
                 Spacer(modifier = Modifier.size(16.dp))
             }
-        }
+        }*/
     }
 }
 
 @Composable
-fun TemasBody(theme_items: List<themeItem>) {
+fun TemasBody(
+    theme_items: List<themeItem>
+) {
     Text(
         text = stringResource(id = R.string.settings_theme_title),
         style = typography.bodyLarge,
@@ -223,7 +228,7 @@ fun TemasBody(theme_items: List<themeItem>) {
             .padding(horizontal = 16.dp)
     ) {
         theme_items.forEach(){ item ->
-            BoxOption(color = item.color)
+            BoxOption(item = item)
             Spacer(modifier = Modifier.size(16.dp))
         }
     }
@@ -231,14 +236,16 @@ fun TemasBody(theme_items: List<themeItem>) {
 
 @Composable
 fun BoxOption(
-    color: Color
+    item: themeItem
 ) {
-    Card {
+    Card(
+        Modifier.clickable { item.action() }
+    ) {
         Box(
             modifier = Modifier
                 .size(100.dp)
                 .padding(8.dp)
-                .background(color, shapes.medium)
+                .background(item.color, shapes.medium)
         )
     }
 }

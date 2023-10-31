@@ -1,65 +1,63 @@
 package net.cristianzvl.multitask
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.Face
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import net.cristianzvl.multitask.Navigation.NavigationHost
+import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
+import net.cristianzvl.multitask.ViewModel.UiState
 import net.cristianzvl.multitask.ui.theme.MultitaskTheme
+import net.cristianzvl.multitask.utils.MultiContentType
+import net.cristianzvl.multitask.utils.MultiNavigationType
 
 class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MultitaskTheme {
+            val multiViewModel: MultitaskViewModel = viewModel()
+            val multiUiState by multiViewModel.uiState.collectAsState()
+
+
+            MultitaskTheme(multiUiState.currentTheme) {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    PantallaPrincipal()
+                    PantallaPrincipal(multiViewModel,multiUiState)
                 }
             }
         }
@@ -73,9 +71,14 @@ data class BottomNavItem(
     val unSelectedIcon: ImageVector
 )
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PantallaPrincipal() {
+fun PantallaPrincipal(
+    multiViewModel: MultitaskViewModel,
+    multiUiState: UiState
+) {
+
     val bottomNavItems = listOf(
         BottomNavItem(
             title = stringResource(id = R.string.bottom_first),
@@ -114,7 +117,10 @@ fun PantallaPrincipal() {
                 .padding(paddingValues)
                 .fillMaxSize()
         ) {
-            NavigationHost(navHostController = navHostController)
+            NavigationHost(
+                navHostController = navHostController,
+                multiViewModel = multiViewModel
+            )
         }
     }
 }

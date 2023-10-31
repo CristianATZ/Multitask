@@ -13,16 +13,22 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
+import net.cristianzvl.multitask.ViewModel.UiState
 
 
 data class InfoItem(
@@ -32,7 +38,11 @@ data class InfoItem(
 )
 
 @Composable
-fun InicioScreen() {
+fun InicioScreen(
+    multiViewModel: MultitaskViewModel
+) {
+    val multiUiState by multiViewModel.uiState.collectAsState()
+
     val info_items = listOf(
         InfoItem(
             name = stringResource(id = R.string.today_inicio),
@@ -42,15 +52,16 @@ fun InicioScreen() {
         InfoItem(
             name = stringResource(id = R.string.notes_inicio),
             icon = Icons.Filled.Edit,
-            count = 2
+            count = multiUiState.countNotes
         ),
         InfoItem(
             name = stringResource(id = R.string.pro_inicio),
             icon = Icons.Filled.Build,
-            count = 2
+            count = multiUiState.countHomeworks
         )
     )
 
+    TopBar()
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -89,4 +100,14 @@ fun InicioScreen() {
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TopBar() {
+    CenterAlignedTopAppBar(
+        title = {
+            Text(text = stringResource(id = R.string.start_title))
+        }
+    )
 }
