@@ -7,3 +7,4 @@ enum class MultiNavigationType {
 enum class MultiContentType {
     LIST_ONLY, LIST_AND_DETAIL
 }
+

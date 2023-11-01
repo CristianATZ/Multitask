@@ -11,23 +11,19 @@ import net.cristianzvl.multitask.InicioScreen
 import net.cristianzvl.multitask.NotaScreen
 import net.cristianzvl.multitask.TareaScreen
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
-import net.cristianzvl.multitask.utils.MultiContentType
 import net.cristianzvl.multitask.utils.MultiNavigationType
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NavigationHost(
     navHostController: NavHostController,
-    multiViewModel: MultitaskViewModel
+    multiViewModel: MultitaskViewModel,
+    navigationType: MultiNavigationType,
 ) {
-    val navigationType: MultiNavigationType
-    val contentType: MultiContentType
 
-
-
-    NavHost(navController = navHostController, startDestination = ItemsMenu.NotaScreen.route){
+    NavHost(navController = navHostController, startDestination = ItemsMenu.InicioScreen.route){
         composable(route = ItemsMenu.NotaScreen.route){
-            NotaScreen(multiViewModel)
+            NotaScreen(multiViewModel,navigationType)
         }
 
         composable(route = ItemsMenu.InicioScreen.route){
@@ -35,7 +31,7 @@ fun NavigationHost(
         }
 
         composable(route = ItemsMenu.TareaScreen.route){
-            TareaScreen(multiViewModel)
+            TareaScreen(multiViewModel,navigationType)
         }
 
         composable(route = ItemsMenu.AjusteScreen.route){

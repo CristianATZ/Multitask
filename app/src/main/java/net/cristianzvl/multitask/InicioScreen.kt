@@ -61,41 +61,43 @@ fun InicioScreen(
         )
     )
 
-    TopBar()
+    Column {
+        TopBar()
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(16.dp)
-    ) {
-        items(info_items.size){ index ->
-            val item = info_items[index]
-            Card {
-                Column(
-                    modifier = Modifier
-                        .padding(PaddingValues(16.dp))
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(16.dp)
+        ) {
+            items(info_items.size){ index ->
+                val item = info_items[index]
+                Card {
+                    Column(
+                        modifier = Modifier
+                            .padding(PaddingValues(16.dp))
                     ) {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = null
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = null
+                            )
 
-                        Spacer(modifier = Modifier.weight(1f))
+                            Spacer(modifier = Modifier.weight(1f))
 
+                            Text(
+                                text = item.count.toString(),
+                                style = typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                         Text(
-                            text = item.count.toString(),
-                            style = typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
+                            text = item.name,
+                            style = typography.labelLarge
                         )
                     }
-                    Text(
-                        text = item.name,
-                        style = typography.labelLarge
-                    )
                 }
             }
         }

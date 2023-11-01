@@ -5,8 +5,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Edit
@@ -20,17 +24,26 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -43,6 +56,7 @@ import net.cristianzvl.multitask.utils.MultiContentType
 import net.cristianzvl.multitask.utils.MultiNavigationType
 
 class MainActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +64,7 @@ class MainActivity : ComponentActivity() {
             val multiViewModel: MultitaskViewModel = viewModel()
             val multiUiState by multiViewModel.uiState.collectAsState()
 
+            val windowSize = calculateWindowSizeClass(activity = this)
 
             MultitaskTheme(multiUiState.currentTheme) {
                 // A surface container using the 'background' color from the theme
@@ -57,7 +72,11 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    PantallaPrincipal(multiViewModel,multiUiState)
+                    PantallaPrincipal(
+                        multiViewModel,
+                        multiUiState,
+                        windowSize.widthSizeClass
+                    )
                 }
             }
         }
@@ -76,9 +95,9 @@ data class BottomNavItem(
 @Composable
 fun PantallaPrincipal(
     multiViewModel: MultitaskViewModel,
-    multiUiState: UiState
+    multiUiState: UiState,
+    windowSize: WindowWidthSizeClass
 ) {
-
     val bottomNavItems = listOf(
         BottomNavItem(
             title = stringResource(id = R.string.bottom_first),
@@ -109,6 +128,56 @@ fun PantallaPrincipal(
     val navHostController = rememberNavController()
     val scope = rememberCoroutineScope()
 
+    val navigationType: MultiNavigationType
+    val contentType: MultiContentType
+
+    // inicilizar variables dependiendo de la forma del width
+    when(windowSize){
+        WindowWidthSizeClass.Compact -> {
+            navigationType = MultiNavigationType.BOTTOM_NAVIGATION
+            contentType = MultiContentType.LIST_ONLY
+        }
+        WindowWidthSizeClass.Medium -> {
+            navigationType = MultiNavigationType.BOTTOM_NAVIGATION
+            contentType = MultiContentType.LIST_ONLY
+        }
+        WindowWidthSizeClass.Expanded -> {
+            navigationType = MultiNavigationType.NAVIGATION_RAIL
+            contentType = MultiContentType.LIST_AND_DETAIL
+        }
+        else -> {
+            navigationType = MultiNavigationType.BOTTOM_NAVIGATION
+            contentType = MultiContentType.LIST_ONLY
+        }
+    }
+
+    if(navigationType == MultiNavigationType.NAVIGATION_RAIL){
+        MultiNavigationExtended(
+            bottomNavItems,
+            multiViewModel,
+            navHostController,
+            navigationType
+        )
+    } else {
+        MultiNavigationCompact(
+            bottomNavItems,
+            multiViewModel,
+            navHostController,
+            navigationType
+        )
+    }
+
+
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun MultiNavigationCompact(
+    bottomNavItems: List<BottomNavItem>,
+    multiViewModel: MultitaskViewModel,
+    navHostController: NavHostController,
+    navigationType: MultiNavigationType
+) {
     Scaffold(
         bottomBar = { BottomBarBody(navHostController,bottomNavItems) }
     ) { paddingValues ->
@@ -119,11 +188,72 @@ fun PantallaPrincipal(
         ) {
             NavigationHost(
                 navHostController = navHostController,
-                multiViewModel = multiViewModel
+                multiViewModel = multiViewModel,
+                navigationType
             )
         }
     }
 }
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun MultiNavigationExtended(
+    bottomNavItems: List<BottomNavItem>,
+    multiViewModel: MultitaskViewModel,
+    navHostController: NavHostController,
+    navigationType: MultiNavigationType
+) {
+    Row {
+        // rail de navegacion
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Spacer(modifier = Modifier.size(16.dp))
+
+            Text(
+                text = stringResource(id = R.string.rail_title),
+                fontWeight = FontWeight.Bold,
+                color = colorScheme.primary
+            )
+
+            NavigationRail {
+                var currentRoute = currentRoute(navHostController = navHostController)
+
+                bottomNavItems.forEach(){ item ->
+                    NavigationRailItem(
+                        selected = currentRoute == item.route,
+                        onClick = { navHostController.navigate(item.route) },
+                        icon = {
+                            Row {
+                                Icon(
+                                    imageVector = if(currentRoute == item.route) item.selectedIcon else item.unSelectedIcon,
+                                    contentDescription = item.title
+                                )
+
+                                Spacer(modifier = Modifier.size(8.dp))
+
+                                Text(
+                                    text = item.title
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                    )
+                }
+            }
+        }
+
+        // conjunto
+        NavigationHost(
+            navHostController = navHostController,
+            multiViewModel = multiViewModel,
+            navigationType = navigationType
+        )
+    }
+}
+
 @Composable
 fun BottomBarBody(
     navHostController: NavHostController,

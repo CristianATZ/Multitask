@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBox
 import androidx.compose.material.icons.outlined.Add
@@ -61,6 +60,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import net.cristianzvl.multitask.Model.Note
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
+import net.cristianzvl.multitask.utils.MultiNavigationType
 import java.time.LocalDateTime
 
 data class NotaItem(
@@ -74,65 +74,71 @@ data class NotaItem(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun NotaScreen(multiViewModel: MultitaskViewModel) {
+fun NotaScreen(
+    multiViewModel: MultitaskViewModel,
+    navigationType: MultiNavigationType
+) {
     val scope = rememberCoroutineScope()
     val snackbarHost = remember {
         SnackbarHostState()
     }
 
-    /*val notas_items = listOf(
-        NotaItem(
-            name = "Importante",
-            desc = "El dia de hoy tuvimos muchos pedos jajajajajajajajajajjajajajajajajajajaj"
-        ),
-        NotaItem(
-            name = "Medio importante",
-            desc = "No sabemos que hacer con la aplicacion"
-        )
-    )*/
-
     val multiUiState by multiViewModel.uiState.collectAsState()
 
     val notas_items = multiUiState.notes
 
-    Column(
-        Modifier.fillMaxSize()
-    ) {
-        TopBar()
 
-        Box {
+    Row {
 
-            if(multiUiState.countNotes > 0){
-                // notas
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                ){
-                    items(notas_items.size){ index ->
-                        val item = notas_items[index]
-                        NotaBody(item)
+        // cuerpo de las notas
+        Column(
+            Modifier.weight(1f)
+        ) {
+            TopBar()
+
+            Box {
+
+                if(multiUiState.countNotes > 0){
+                    // notas
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ){
+                        items(notas_items.size){ index ->
+                            val item = notas_items[index]
+                            NotaBody(item)
+                        }
+                    }
+                } else {
+                    // tip de notas
+                    Column(
+                        Modifier
+                            .fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.tip_notes),
+                            style = typography.bodyLarge,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth(0.6f)
+                        )
                     }
                 }
-            } else {
-                // tip de notas
-                Column(
-                    Modifier
-                        .fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = stringResource(id = R.string.tip_notes),
-                        style = typography.bodyLarge,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth(0.6f)
-                    )
-                }
-            }
 
-            // boton para agregar notas
-            FABody(multiViewModel)
+                // boton para agregar notas
+                FABody(multiViewModel)
+            }
+        }
+
+        // visualizacion previa
+        if(navigationType == MultiNavigationType.NAVIGATION_RAIL){
+            MultiDetailsScreen(
+                title = "Titulo nota",
+                date = "Fecha nota",
+                desc = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."
+            )
         }
     }
 }
