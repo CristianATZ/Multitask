@@ -21,6 +21,8 @@
     <string name="desc_notas">Ingresa una nota</string>
     <string name="btnGuardar_notas">Guardar</string>
     <string name="tip_notes">Aqui podras ver tus notas una vez que las agregues.</string>
+    <string name="edit_button">Editar</string>
+    <string name="delete_button">Eliminar</string>
 
     // tareas screen
     <string name="tareas_title">Tareas</string>
@@ -29,7 +31,8 @@
     <string name="tip_homeworks">Agrega tus tareas para que no se olvide hacerlas.</string>
 
     // inicio screen
-    <string name="start_title">Informacino general</string>
+    <string name="rail_title">Multitask</string>
+    <string name="start_title">Informacion general</string>
     <string name="notes_inicio">Notas</string>
     <string name="pro_inicio">Programados</string>
     <string name="today_inicio">Hoy</string>

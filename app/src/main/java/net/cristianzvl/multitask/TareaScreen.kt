@@ -59,6 +59,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import net.cristianzvl.multitask.Model.Work
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
+import net.cristianzvl.multitask.utils.MultiNavigationType
 
 data class TareasItem(
     val name: String,
@@ -69,47 +70,57 @@ data class TareasItem(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun TareaScreen(multiViewModel: MultitaskViewModel) {
+fun TareaScreen(multiViewModel: MultitaskViewModel, navigationType: MultiNavigationType) {
     val multiUiState by multiViewModel.uiState.collectAsState()
 
     val tareas_items = multiUiState.works
 
-    Column(
-        Modifier.fillMaxSize()
-    ) {
-        TopBar()
+    Row {
+        Column(
+            Modifier.weight(1f)
+        ) {
+            TopBar()
 
-        Box {
-            if(multiUiState.countHomeworks > 0){
-                // notas
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                ){
-                    items(tareas_items.size){ index ->
-                        val item = tareas_items[index]
-                        TareaBody(item)
+            Box {
+                if(multiUiState.countHomeworks > 0){
+                    // notas
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ){
+                        items(tareas_items.size){ index ->
+                            val item = tareas_items[index]
+                            TareaBody(item)
+                        }
+                    }
+                } else {
+                    // tip de tareas
+                    Column(
+                        Modifier
+                            .fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.tip_homeworks),
+                            style = typography.bodyLarge,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth(0.6f)
+                        )
                     }
                 }
-            } else {
-                // tip de notas
-                Column(
-                    Modifier
-                        .fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = stringResource(id = R.string.tip_homeworks),
-                        style = typography.bodyLarge,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth(0.6f)
-                    )
-                }
-            }
 
-            FABody(multiViewModel)
+                FABody(multiViewModel)
+            }
+        }
+
+        if(navigationType == MultiNavigationType.NAVIGATION_RAIL){
+            MultiDetailsScreen(
+                title = "Titulo tarea",
+                date = "Fecha tarea",
+                desc = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."
+            )
         }
     }
 }

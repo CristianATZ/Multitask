@@ -12,10 +12,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme.shapes
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -116,14 +119,7 @@ fun AjusteScreen(multiViewModel: MultitaskViewModel) {
         modifier = Modifier
             .verticalScroll(rememberScrollState())
     ) {
-        Text(
-            text = stringResource(id = R.string.settings_title),
-            style = typography.titleLarge,
-            modifier = Modifier
-                .padding(16.dp)
-        )
-
-        Divider()
+        TopBar()
 
         TemasBody(theme_items)
 
@@ -137,6 +133,18 @@ fun AjusteScreen(multiViewModel: MultitaskViewModel) {
 
         Spacer(modifier = Modifier.size(32.dp))
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TopBar() {
+    CenterAlignedTopAppBar(
+        title = {
+            Text(
+                text = stringResource(id = R.string.settings_title)
+            )
+        }
+    )
 }
 
 @Composable
