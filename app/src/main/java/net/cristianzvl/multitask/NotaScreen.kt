@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.ThumbUp
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
@@ -40,6 +42,7 @@ import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -50,26 +53,24 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import net.cristianzvl.multitask.Model.Note
+import kotlinx.coroutines.launch
+import net.cristianzvl.multitask.Room.NoteDB
+import net.cristianzvl.multitask.Room.NotesData
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
 import net.cristianzvl.multitask.utils.MultiNavigationType
 import java.time.LocalDateTime
-
-data class NotaItem(
-    // val miniatura: ImageVector
-    val name: String,
-    val desc: String,
-    // val date: String,
-    val isSelected: Boolean = false
-)
 
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -85,8 +86,7 @@ fun NotaScreen(
 
     val multiUiState by multiViewModel.uiState.collectAsState()
 
-    val notas_items = multiUiState.notes
-
+    var notas_items = multiUiState.notes
 
     Row {
 
@@ -98,7 +98,7 @@ fun NotaScreen(
 
             Box {
 
-                if(multiUiState.countNotes > 0){
+                if(notas_items.isNotEmpty()){
                     // notas
                     LazyColumn(
                         modifier = Modifier
@@ -106,7 +106,7 @@ fun NotaScreen(
                     ){
                         items(notas_items.size){ index ->
                             val item = notas_items[index]
-                            NotaBody(item)
+                            NotaBody(item,multiViewModel)
                         }
                     }
                 } else {
@@ -153,13 +153,74 @@ private fun TopBar() {
     )
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NotaBody(
-    item: Note
+    item: NotesData,
+    multiViewModel: MultitaskViewModel
 ) {
+    val msg = buildAnnotatedString {
+        append(stringResource(id = R.string.lblConfirmarP1_notas) + " ")
+        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+            append(item.titlenote)
+        }
+        append(" " + stringResource(id = R.string.lblConfirmarP2_notas))
+    }
+
     var eliminar by remember {
         mutableStateOf(false)
+    }
+
+
+    val coroutine = rememberCoroutineScope()
+
+    if(eliminar){
+        Dialog(
+            onDismissRequest = { /*TODO*/ }
+        ) {
+            Card(
+                Modifier.fillMaxWidth(0.85f)
+            ) {
+                Column(
+                    Modifier.padding(PaddingValues(16.dp))
+                ) {
+                    Text(
+                        text = msg,
+                        Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.size(16.dp))
+                    // boton eliminar
+                    Button(
+                        onClick = {
+                            // eliminar
+                            multiViewModel.deleteNote(item)
+                            eliminar = false
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                    ) {
+                        Text(text = stringResource(id = R.string.btnEliminar))
+                    }
+
+
+                    // boton cancelar
+                    TextButton(
+                        onClick = {
+                            eliminar = !eliminar
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                    ) {
+                        Text(text = stringResource(id = R.string.btnCancelar))
+                    }
+                }
+            }
+        }
     }
 
     Card(
@@ -167,12 +228,11 @@ fun NotaBody(
             .padding(vertical = 8.dp, horizontal = 16.dp)
             .combinedClickable(
                 onClick = {
-                    if (eliminar) eliminar = !eliminar
-                    else {
-                        // abrir la nota para poder editarla
-                    }
+
                 },
-                onLongClick = { eliminar = !eliminar }
+                onLongClick = {
+                    eliminar = !eliminar
+                }
             )
     ) {
         Row(
@@ -188,7 +248,7 @@ fun NotaBody(
                     .fillMaxWidth(0.7f)
             ) {
                 Text(
-                    text = item.title,
+                    text = item.titlenote,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = typography.titleMedium,
@@ -198,7 +258,7 @@ fun NotaBody(
                 Spacer(modifier = Modifier.size(16.dp))
                 
                 Text(
-                    text = item.desc,
+                    text = item.descnote,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     style = typography.bodyMedium
@@ -216,11 +276,11 @@ fun NotaBody(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = item.day,
+                        text = "27",
                         style = typography.bodySmall
                     )
                     Text(
-                        text = item.month,
+                        text = "Nov",
                         style = typography.bodySmall
                     )
                 }
@@ -276,6 +336,9 @@ fun DialogAddNote(
     onClick: () -> Unit,
     multiViewModel: MultitaskViewModel
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
+    val context = LocalContext.current
 
     var title by remember {
         mutableStateOf("")
@@ -466,7 +529,7 @@ fun DialogAddNote(
                             contentDescription = null
                         )
                         Text(
-                            text = "Galeri",
+                            text = "Galeria",
                             style = typography.bodySmall
                         )
                     }
@@ -477,14 +540,12 @@ fun DialogAddNote(
                 // agregar nota
                 IconButton(
                     onClick = {
-                        multiViewModel.addNote(
-                            Note(
-                                title,
-                                nota,
-                                LocalDateTime.now().dayOfMonth.toString(),
-                                LocalDateTime.now().month.toString()
-                            )
+                        val item = NotesData(
+                            id = 0,
+                            titlenote = title,
+                            descnote = nota
                         )
+                        multiViewModel.addNote(item)
                         onClick()
                     },
                     modifier = Modifier

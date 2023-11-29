@@ -1,3 +1,4 @@
+/*
 package net.cristianzvl.multitask.Room
 
 import android.content.ClipData.Item
@@ -15,3 +16,4 @@ class OfflineRepository(private val itemDao: NoteDao) : NotesRepository {
 
     override suspend fun updateItem(item: Item) = itemDao.update(item)
 }
+*/

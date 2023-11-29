@@ -23,6 +23,10 @@
     <string name="tip_notes">Aqui podras ver tus notas una vez que las agregues.</string>
     <string name="edit_button">Editar</string>
     <string name="delete_button">Eliminar</string>
+    <string name="lblConfirmarP1_notas">Estas a punto de eliminar </string>
+    <string name="lblConfirmarP2_notas">¿Estas seguro?</string>
+    <string name="btnEliminar">Eliminar</string>
+    <string name="btnCancelar">Cancelar</string>
 
     // tareas screen
     <string name="tareas_title">Tareas</string>

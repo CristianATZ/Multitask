@@ -1,19 +1,23 @@
 package net.cristianzvl.multitask.Room
 
-import android.content.ClipData
-import android.content.Context
-import android.media.RouteListingPreference
 import androidx.room.Database
-import androidx.room.Room
 import androidx.room.RoomDatabase
-import android.content.ClipData.Item
 
-// aqui es ITEM
-@Database(entities = [Item::class], version = 1, exportSchema = false)
-abstract class MultiDatabase : RoomDatabase() {
-    abstract fun ItemDao(): NoteDao
 
-    companion object {
+@Database(entities = [NotesData::class], version = 1, exportSchema = true)
+abstract class NoteDB : RoomDatabase() {
+    abstract fun NotesDao(): NoteDao
+}
+
+/*
+@Database(entities = [NotesData::class], version = 1, exportSchema = true)
+abstract class WorkDB : RoomDatabase() {
+    abstract fun WorksDao(): WorkDao
+}
+*/
+
+
+/*companion object {
         @Volatile
         private var Instance: MultiDatabase? = null
 
@@ -24,5 +28,4 @@ abstract class MultiDatabase : RoomDatabase() {
                     .build().also { Instance = it }
             }
         }
-    }
-}
+    }*/

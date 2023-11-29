@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import net.cristianzvl.multitask.AjusteScreen
 import net.cristianzvl.multitask.InicioScreen
 import net.cristianzvl.multitask.NotaScreen
+import net.cristianzvl.multitask.Room.NoteDB
 import net.cristianzvl.multitask.TareaScreen
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
 import net.cristianzvl.multitask.utils.MultiNavigationType
@@ -18,7 +19,7 @@ import net.cristianzvl.multitask.utils.MultiNavigationType
 fun NavigationHost(
     navHostController: NavHostController,
     multiViewModel: MultitaskViewModel,
-    navigationType: MultiNavigationType,
+    navigationType: MultiNavigationType
 ) {
 
     NavHost(navController = navHostController, startDestination = ItemsMenu.InicioScreen.route){
