@@ -160,7 +160,6 @@ fun NotaBody(
     multiViewModel: MultitaskViewModel
 ) {
 
-    val coroutine = rememberCoroutineScope()
     // mensaje
     val msg = buildAnnotatedString {
         append(stringResource(id = R.string.lblConfirmarP1_notas) + " ")
@@ -206,9 +205,7 @@ fun NotaBody(
                     Button(
                         onClick = {
                             // eliminar
-                            coroutine.launch {
-                                multiViewModel.deleteNote(item)
-                            }
+                            multiViewModel.deleteNote(item)
                             eliminar = false
                         },
                         shape = RoundedCornerShape(8.dp),
@@ -360,7 +357,6 @@ fun DialogAddNote(
         mutableStateOf(if(update) nota.descnote else "")
     }
 
-    val coroutine = rememberCoroutineScope()
 
     Dialog(
         onDismissRequest = { /*TODO*/ },
@@ -562,9 +558,7 @@ fun DialogAddNote(
                                 daynote = LocalDate.now().dayOfMonth.toString(),
                                 monthnote = LocalDate.now().month.toString()
                             )
-                            coroutine.launch {
-                                multiViewModel.addNote(item)
-                            }
+                            multiViewModel.addNote(item)
                         } else {
                             val item = NotesData(
                                 id = nota.id,
@@ -574,9 +568,7 @@ fun DialogAddNote(
                                 monthnote = LocalDate.now().month.toString()
                             )
                             if(title != nota.titlenote || desc != nota.descnote){
-                                coroutine.launch {
-                                    multiViewModel.updateNote(item)
-                                }
+                                multiViewModel.updateNote(item)
                             }
                         }
                         onClick()

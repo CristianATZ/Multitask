@@ -1,15 +1,15 @@
 package net.cristianzvl.multitask.ViewModel
 
 import android.content.Context
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.room.Room
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import net.cristianzvl.multitask.Model.Work
+import kotlinx.coroutines.launch
 import net.cristianzvl.multitask.Room.Constants
 import net.cristianzvl.multitask.Room.NotesData
 import net.cristianzvl.multitask.Room.TaskDB
@@ -19,17 +19,18 @@ import net.cristianzvl.multitask.Room.WorksData
 class MultitaskViewModel(applicationContext: Context) : ViewModel() {
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
-    val noteDb = Room.databaseBuilder(applicationContext, TaskDB::class.java, Constants.DB.NAME).allowMainThreadQueries().build()
-    val workDb = Room.databaseBuilder(applicationContext, TaskDB::class.java, Constants.DB.NAME).allowMainThreadQueries().build()
+    val db = Room.databaseBuilder(applicationContext, TaskDB::class.java, Constants.DB.NAME).build()
 
     init {
-        _uiState.value = UiState(
-            currentTheme = false,
-            notes = noteDb.NotesDao().getAllItems(),
-            //works = workDb.WorksDao().getAllItems(), // crashea aqui
-            countNotes = noteDb.NotesDao().getAllItems().size,
-            //countHomeworks = workDb.WorksDao().getAllItems().size
-        )
+        viewModelScope.launch(Dispatchers.IO){
+            _uiState.value = UiState(
+                currentTheme = false,
+                notes = db.NotesDao().getAllItems(),
+                works = db.WorksDao().getAllItems(),
+                countNotes = db.NotesDao().getAllItems().size,
+                countHomeworks = db.WorksDao().getAllItems().size
+            )
+        }
     }
 
     fun changeTheme(theme: Boolean){
@@ -44,39 +45,48 @@ class MultitaskViewModel(applicationContext: Context) : ViewModel() {
         }
     }
 
-    // recompose app
-    fun getAllNotes(){
+    // inicio recompose app -----------------------------------------------------------------
+    fun updateAllNotes(){
         _uiState.update { currentState ->
-            currentState.copy(notes = noteDb.NotesDao().getAllItems())
+            currentState.copy(notes = db.NotesDao().getAllItems())
         }
     }
 
-    fun getAllWorks(){
-        _uiState.update { currentState ->
-            currentState.copy(works = workDb.WorksDao().getAllItems())
+    fun updateAllWorks(){
+        viewModelScope.launch(Dispatchers.IO){
+            _uiState.update { currentState ->
+                currentState.copy(works = db.WorksDao().getAllItems())
+            }
         }
     }
+    // fin recompose app ---------------------------------------------------------------------
 
     // inicio notas --------------------------------------------------------------------------
     fun addNote(
         nota: NotesData
     ){
-        noteDb.NotesDao().insert(nota)
-        getAllNotes()
+        viewModelScope.launch(Dispatchers.IO){
+            db.NotesDao().insert(nota)
+            updateAllNotes()
+        }
     }
 
     fun updateNote(
         nota: NotesData
     ){
-        noteDb.NotesDao().update(nota)
-        getAllNotes()
+        viewModelScope.launch(Dispatchers.IO){
+            db.NotesDao().update(nota)
+            updateAllNotes()
+        }
     }
 
     fun deleteNote(
         nota: NotesData
     ){
-        noteDb.NotesDao().delete(nota)
-        getAllNotes()
+        viewModelScope.launch(Dispatchers.IO){
+            db.NotesDao().delete(nota)
+            updateAllNotes()
+        }
     }
     // fin notas --------------------------------------------------------------
 
@@ -84,22 +94,22 @@ class MultitaskViewModel(applicationContext: Context) : ViewModel() {
     fun addWork(
         work: WorksData
     ){
-        workDb.WorksDao().insert(work)
-        getAllWorks()
+        db.WorksDao().insert(work)
+        updateAllWorks()
     }
 
     fun updateWork(
         work: WorksData
     ){
-        workDb.WorksDao().update(work)
-        getAllWorks()
+        db.WorksDao().update(work)
+        updateAllWorks()
     }
 
     fun deleteWork(
         work: WorksData
     ){
-        workDb.WorksDao().delete(work)
-        getAllWorks()
+        db.WorksDao().delete(work)
+        updateAllWorks()
     }
     // fin tareas -------------------------------------------------------------
 }
