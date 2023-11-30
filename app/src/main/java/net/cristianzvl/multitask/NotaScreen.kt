@@ -64,6 +64,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.launch
 import net.cristianzvl.multitask.Room.NotesData
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
 import net.cristianzvl.multitask.utils.MultiNavigationType
@@ -158,6 +159,8 @@ fun NotaBody(
     item: NotesData,
     multiViewModel: MultitaskViewModel
 ) {
+
+    val coroutine = rememberCoroutineScope()
     // mensaje
     val msg = buildAnnotatedString {
         append(stringResource(id = R.string.lblConfirmarP1_notas) + " ")
@@ -203,7 +206,9 @@ fun NotaBody(
                     Button(
                         onClick = {
                             // eliminar
-                            multiViewModel.deleteNote(item)
+                            coroutine.launch {
+                                multiViewModel.deleteNote(item)
+                            }
                             eliminar = false
                         },
                         shape = RoundedCornerShape(8.dp),
@@ -354,6 +359,8 @@ fun DialogAddNote(
     var desc by remember {
         mutableStateOf(if(update) nota.descnote else "")
     }
+
+    val coroutine = rememberCoroutineScope()
 
     Dialog(
         onDismissRequest = { /*TODO*/ },
@@ -555,7 +562,9 @@ fun DialogAddNote(
                                 daynote = LocalDate.now().dayOfMonth.toString(),
                                 monthnote = LocalDate.now().month.toString()
                             )
-                            multiViewModel.addNote(item)
+                            coroutine.launch {
+                                multiViewModel.addNote(item)
+                            }
                         } else {
                             val item = NotesData(
                                 id = nota.id,
@@ -565,7 +574,9 @@ fun DialogAddNote(
                                 monthnote = LocalDate.now().month.toString()
                             )
                             if(title != nota.titlenote || desc != nota.descnote){
-                                multiViewModel.updateNote(item)
+                                coroutine.launch {
+                                    multiViewModel.updateNote(item)
+                                }
                             }
                         }
                         onClick()

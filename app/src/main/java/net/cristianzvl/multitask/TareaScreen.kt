@@ -90,7 +90,7 @@ fun TareaScreen(multiViewModel: MultitaskViewModel, navigationType: MultiNavigat
                     ){
                         items(tareas_items.size){ index ->
                             val item = tareas_items[index]
-                            TareaBody(item)
+                            //TareaBody(item)
                         }
                     }
                 } else {
@@ -473,12 +473,12 @@ private fun DialogAddTarea(
                 // guardar tarea
                 IconButton(
                     onClick = {
-                        multiViewModel.addWork(
+                        /*multiViewModel.addWork(
                             Work(
                                 title,
                                 nota
                             )
-                        )
+                        )*/
                         onClick()
                     },
                     modifier = Modifier

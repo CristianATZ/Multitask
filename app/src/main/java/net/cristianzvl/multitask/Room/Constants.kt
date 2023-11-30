@@ -2,7 +2,7 @@ package net.cristianzvl.multitask.Room
 
 class Constants {
     object DB {
-        const val NAME = "Notes.db"
+        const val NAME = "Task.db"
     }
 
     object NotesTable {
@@ -16,8 +16,8 @@ class Constants {
     object WorksTable {
         const val TABLE_NAME = "workstable"
         const val NAME = "tilework"
-        const val DATE = "datework"
         const val DESC = "notework"
+        // date
+        // hour
     }
 }
-

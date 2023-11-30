@@ -19,5 +19,7 @@ data class NotesData(
 data class WorksData(
     @PrimaryKey(autoGenerate = true) val id: Int,
     @ColumnInfo(name = Constants.WorksTable.NAME) val titlework: String,
-    @ColumnInfo(name = Constants.WorksTable.DESC) val descwork: String
+    @ColumnInfo(name = Constants.WorksTable.DESC) val descwork: String,
+    // date
+    // hour
 )

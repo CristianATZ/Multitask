@@ -11,23 +11,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import net.cristianzvl.multitask.Model.Work
 import net.cristianzvl.multitask.Room.Constants
-import net.cristianzvl.multitask.Room.NoteDB
 import net.cristianzvl.multitask.Room.NotesData
+import net.cristianzvl.multitask.Room.TaskDB
+import net.cristianzvl.multitask.Room.WorksData
 
 
 class MultitaskViewModel(applicationContext: Context) : ViewModel() {
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
-    val noteDb = Room.databaseBuilder(applicationContext, NoteDB::class.java, Constants.DB.NAME).allowMainThreadQueries().build()
-
-    // Gatillo para forzar la recomposición
-    private val _forceUpdateTrigger: MutableState<Boolean> = mutableStateOf(false)
+    val noteDb = Room.databaseBuilder(applicationContext, TaskDB::class.java, Constants.DB.NAME).allowMainThreadQueries().build()
+    val workDb = Room.databaseBuilder(applicationContext, TaskDB::class.java, Constants.DB.NAME).allowMainThreadQueries().build()
 
     init {
         _uiState.value = UiState(
             currentTheme = false,
             notes = noteDb.NotesDao().getAllItems(),
-            countNotes = noteDb.NotesDao().getAllItems().size
+            //works = workDb.WorksDao().getAllItems(), // crashea aqui
+            countNotes = noteDb.NotesDao().getAllItems().size,
+            //countHomeworks = workDb.WorksDao().getAllItems().size
         )
     }
 
@@ -43,41 +44,63 @@ class MultitaskViewModel(applicationContext: Context) : ViewModel() {
         }
     }
 
+    // recompose app
+    fun getAllNotes(){
+        _uiState.update { currentState ->
+            currentState.copy(notes = noteDb.NotesDao().getAllItems())
+        }
+    }
+
+    fun getAllWorks(){
+        _uiState.update { currentState ->
+            currentState.copy(works = workDb.WorksDao().getAllItems())
+        }
+    }
+
+    // inicio notas --------------------------------------------------------------------------
     fun addNote(
         nota: NotesData
     ){
         noteDb.NotesDao().insert(nota)
-        recomposeView()
+        getAllNotes()
     }
 
     fun updateNote(
         nota: NotesData
     ){
         noteDb.NotesDao().update(nota)
-        recomposeView()
+        getAllNotes()
     }
 
     fun deleteNote(
         nota: NotesData
     ){
         noteDb.NotesDao().delete(nota)
-        recomposeView()
+        getAllNotes()
     }
+    // fin notas --------------------------------------------------------------
 
-    private fun upCountWorks(){
-        _uiState.update { currentState ->
-            currentState.copy(countHomeworks = currentState.countHomeworks + 1)
-        }
-    }
-
+    // inicio tareas ----------------------------------------------------------
     fun addWork(
-        work: Work
+        work: WorksData
     ){
-        _uiState.update { currentState ->
-            currentState.copy(works = currentState.works + work)
-        }
-
-        upCountWorks()
+        workDb.WorksDao().insert(work)
+        getAllWorks()
     }
+
+    fun updateWork(
+        work: WorksData
+    ){
+        workDb.WorksDao().update(work)
+        getAllWorks()
+    }
+
+    fun deleteWork(
+        work: WorksData
+    ){
+        workDb.WorksDao().delete(work)
+        getAllWorks()
+    }
+    // fin tareas -------------------------------------------------------------
 }
 
