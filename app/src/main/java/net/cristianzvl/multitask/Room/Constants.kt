@@ -8,8 +8,9 @@ class Constants {
     object NotesTable {
         const val TABLE_NAME = "notestable"
         const val NAME = "tilenote"
-        const val DATE = "datenote"
         const val DESC = "notedesc"
+        const val DAY = "daynote"
+        const val MONTH = "monthnote"
     }
 
     object WorksTable {

@@ -1,6 +1,8 @@
 package net.cristianzvl.multitask.ViewModel
 
 import android.content.Context
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.room.Room
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +20,9 @@ class MultitaskViewModel(applicationContext: Context) : ViewModel() {
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
     val noteDb = Room.databaseBuilder(applicationContext, NoteDB::class.java, Constants.DB.NAME).allowMainThreadQueries().build()
 
+    // Gatillo para forzar la recomposición
+    private val _forceUpdateTrigger: MutableState<Boolean> = mutableStateOf(false)
+
     init {
         _uiState.value = UiState(
             currentTheme = false,
@@ -32,7 +37,7 @@ class MultitaskViewModel(applicationContext: Context) : ViewModel() {
         }
     }
 
-    private fun upCountNotes(){
+    private fun recomposeView(){
         _uiState.update { currentState ->
             currentState.copy(countNotes = currentState.countNotes + 1)
         }
@@ -47,18 +52,22 @@ class MultitaskViewModel(applicationContext: Context) : ViewModel() {
     fun addNote(
         nota: NotesData
     ){
-        /*_uiState.update { currentState ->
-            currentState.copy(notes = currentState.notes + nota)
-        }*/
         noteDb.NotesDao().insert(nota)
-        upCountNotes()
+        recomposeView()
+    }
+
+    fun updateNote(
+        nota: NotesData
+    ){
+        noteDb.NotesDao().update(nota)
+        recomposeView()
     }
 
     fun deleteNote(
         nota: NotesData
     ){
         noteDb.NotesDao().delete(nota)
-        downCountNotes()
+        recomposeView()
     }
 
     private fun upCountWorks(){

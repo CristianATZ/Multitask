@@ -53,7 +53,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -65,11 +64,10 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import kotlinx.coroutines.launch
-import net.cristianzvl.multitask.Room.NoteDB
 import net.cristianzvl.multitask.Room.NotesData
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
 import net.cristianzvl.multitask.utils.MultiNavigationType
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 
@@ -160,6 +158,7 @@ fun NotaBody(
     item: NotesData,
     multiViewModel: MultitaskViewModel
 ) {
+    // mensaje
     val msg = buildAnnotatedString {
         append(stringResource(id = R.string.lblConfirmarP1_notas) + " ")
         withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
@@ -172,8 +171,18 @@ fun NotaBody(
         mutableStateOf(false)
     }
 
+    var openDialog by remember {
+        mutableStateOf(false)
+    }
 
-    val coroutine = rememberCoroutineScope()
+    if(openDialog){
+        DialogAddNote(
+            onClick = { openDialog = !openDialog },
+            multiViewModel = multiViewModel,
+            nota = item,
+            update = true
+        )
+    }
 
     if(eliminar){
         Dialog(
@@ -228,7 +237,7 @@ fun NotaBody(
             .padding(vertical = 8.dp, horizontal = 16.dp)
             .combinedClickable(
                 onClick = {
-
+                    openDialog = !openDialog
                 },
                 onLongClick = {
                     eliminar = !eliminar
@@ -276,11 +285,11 @@ fun NotaBody(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "27",
+                        text = item.daynote,
                         style = typography.bodySmall
                     )
                     Text(
-                        text = "Nov",
+                        text = item.monthnote,
                         style = typography.bodySmall
                     )
                 }
@@ -334,18 +343,16 @@ private fun FABody(
 @Composable
 fun DialogAddNote(
     onClick: () -> Unit,
-    multiViewModel: MultitaskViewModel
+    multiViewModel: MultitaskViewModel,
+    update: Boolean = false,
+    nota: NotesData = NotesData(0,"","","","")
 ) {
-    val coroutineScope = rememberCoroutineScope()
-
-    val context = LocalContext.current
-
     var title by remember {
-        mutableStateOf("")
+        mutableStateOf(if(update) nota.titlenote else "")
     }
 
-    var nota by remember {
-        mutableStateOf("")
+    var desc by remember {
+        mutableStateOf(if(update) nota.descnote else "")
     }
 
     Dialog(
@@ -428,8 +435,8 @@ fun DialogAddNote(
                     .padding(PaddingValues(16.dp))
             ) {
                 OutlinedTextField(
-                    value = nota,
-                    onValueChange = { nota = it },
+                    value = desc,
+                    onValueChange = { desc = it },
                     placeholder = {
                         Text(
                             text = stringResource(id = R.string.desc_notas),
@@ -540,12 +547,27 @@ fun DialogAddNote(
                 // agregar nota
                 IconButton(
                     onClick = {
-                        val item = NotesData(
-                            id = 0,
-                            titlenote = title,
-                            descnote = nota
-                        )
-                        multiViewModel.addNote(item)
+                        if(!update){
+                            val item = NotesData(
+                                id = 0,
+                                titlenote = title,
+                                descnote = desc,
+                                daynote = LocalDate.now().dayOfMonth.toString(),
+                                monthnote = LocalDate.now().month.toString()
+                            )
+                            multiViewModel.addNote(item)
+                        } else {
+                            val item = NotesData(
+                                id = nota.id,
+                                titlenote = title,
+                                descnote = desc,
+                                daynote = LocalDate.now().dayOfMonth.toString(),
+                                monthnote = LocalDate.now().month.toString()
+                            )
+                            if(title != nota.titlenote || desc != nota.descnote){
+                                multiViewModel.updateNote(item)
+                            }
+                        }
                         onClick()
                     },
                     modifier = Modifier
