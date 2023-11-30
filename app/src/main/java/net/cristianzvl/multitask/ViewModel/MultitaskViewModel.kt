@@ -43,12 +43,6 @@ class MultitaskViewModel(applicationContext: Context) : ViewModel() {
         }
     }
 
-    private fun downCountNotes(){
-        _uiState.update { currentState ->
-            currentState.copy(countNotes = currentState.countNotes - 1)
-        }
-    }
-
     fun addNote(
         nota: NotesData
     ){
