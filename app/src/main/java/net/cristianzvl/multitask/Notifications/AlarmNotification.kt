@@ -12,18 +12,21 @@ class AlarmNotification(): BroadcastReceiver() {
         const val NOTIFICACION_ID = 5
     }
 
-    override fun onReceive(context: Context, intent: Intent?) {
-        createNotification(context)
+    override fun onReceive(context: Context, intent: Intent) {
+        createNotification(context,intent)
     }
 
-    private fun createNotification(context: Context) {
+    private fun createNotification(context: Context, intent: Intent) {
+        val title = intent.getStringExtra("title")
+        val desc = intent.getStringExtra("desc")
+        val time = intent.getStringExtra("time")
+
         val notificacion = NotificationCompat.Builder(context, "CanalTareas")
             .setSmallIcon(R.drawable.ic_launcher_background)
-            .setContentText("Titulo tarae")
-            .setContentText("La tarea NOMBRE caduca a las 17:00")
+            .setContentText("La tarea $title caduca a las $time")
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("Descripcion de la tarea")
+                    .bigText(desc)
             )
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()

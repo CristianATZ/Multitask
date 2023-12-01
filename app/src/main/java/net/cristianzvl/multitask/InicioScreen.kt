@@ -1,5 +1,7 @@
 package net.cristianzvl.multitask
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,6 +39,7 @@ data class InfoItem(
     val count: Int
 )
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun InicioScreen(
     multiViewModel: MultitaskViewModel
@@ -47,7 +50,7 @@ fun InicioScreen(
         InfoItem(
             name = stringResource(id = R.string.today_inicio),
             icon = Icons.Filled.DateRange,
-            count = 1
+            count = multiUiState.currentTask
         ),
         InfoItem(
             name = stringResource(id = R.string.notes_inicio),
@@ -68,7 +71,7 @@ fun InicioScreen(
             columns = GridCells.Fixed(2),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(16.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
             items(info_items.size){ index ->
                 val item = info_items[index]

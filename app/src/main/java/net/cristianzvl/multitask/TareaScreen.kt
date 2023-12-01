@@ -101,16 +101,45 @@ fun TareaScreen(multiViewModel: MultitaskViewModel, navigationType: MultiNavigat
 
             Box {
                 if(multiUiState.countHomeworks > 0){
-                    // notas
+                    // tareas sin caducar
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                     ){
+                        // lista de tareas pendientes
+                        item {
+                            Text(
+                                text = "Tareas pendientes",
+                                style = typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
                         items(tareas_items.size){ index ->
                             val item = tareas_items[index]
-                            TareaBody(item,multiViewModel)
+                            if(item.datework >= LocalDate.now()){
+                                TareaBody(item,multiViewModel)
+                            }
+                        }
+                        
+                        item {
+                            Spacer(modifier = Modifier.size(16.dp))
+                            Text(
+                                text = "Tareas caducadas o finalizadas",
+                                style = typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
+                        // lista de tareas caducadas o finalizadas
+                        items(tareas_items.size){ index ->
+                            val item = tareas_items[index]
+                            if(item.datework < LocalDate.now()){
+                                TareaBody(item,multiViewModel)
+                            }
                         }
                     }
+
                 } else {
                     // tip de tareas
                     Column(
@@ -274,7 +303,7 @@ private fun TareaBody(
 
     Card(
         modifier = Modifier
-            .padding(PaddingValues(16.dp))
+            .padding(horizontal = 16.dp, vertical = 4.dp)
             .combinedClickable(
                 onClick = {
                     openDialog = !openDialog
@@ -635,6 +664,7 @@ private fun DialogAddTarea(
                                 context = context,
                                 title = item.titlework,
                                 longDesc = item.descwork,
+                                expiration = item.hour,
                                 time = 10000
                             )
 

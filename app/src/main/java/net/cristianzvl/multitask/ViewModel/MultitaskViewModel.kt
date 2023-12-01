@@ -1,6 +1,8 @@
 package net.cristianzvl.multitask.ViewModel
 
 import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
@@ -14,8 +16,10 @@ import net.cristianzvl.multitask.Room.Constants
 import net.cristianzvl.multitask.Room.NotesData
 import net.cristianzvl.multitask.Room.TaskDB
 import net.cristianzvl.multitask.Room.WorksData
+import java.time.LocalDate
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 class MultitaskViewModel(applicationContext: Context) : ViewModel() {
     // viewmodel
     private val _uiState = MutableStateFlow(UiState())
@@ -30,6 +34,7 @@ class MultitaskViewModel(applicationContext: Context) : ViewModel() {
                 currentTheme = false,
                 notes = db.NotesDao().getAllItems(),
                 works = db.WorksDao().getAllItems(),
+                currentTask = db.WorksDao().getCountOfWorksByDate(LocalDate.now()),
                 countNotes = db.NotesDao().getAllItems().size,
                 countHomeworks = db.WorksDao().getAllItems().size
             )

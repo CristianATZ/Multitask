@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import java.time.LocalDate
 
 // dao para las notas
 @Dao
@@ -42,4 +43,7 @@ interface WorkDao {
 
     @Query("SELECT * from workstable")
     fun getAllItems(): List<WorksData>
+
+    @Query("SELECT COUNT(*) FROM workstable WHERE datework = :fecha")
+    fun getCountOfWorksByDate(fecha: LocalDate): Int
 }

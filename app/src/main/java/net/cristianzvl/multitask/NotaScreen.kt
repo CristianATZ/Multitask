@@ -236,7 +236,7 @@ fun NotaBody(
 
     Card(
         modifier = Modifier
-            .padding(vertical = 8.dp, horizontal = 16.dp)
+            .padding(vertical = 4.dp, horizontal = 16.dp)
             .combinedClickable(
                 onClick = {
                     openDialog = !openDialog

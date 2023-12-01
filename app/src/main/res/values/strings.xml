@@ -39,7 +39,7 @@
     <string name="rail_title">Multitask</string>
     <string name="start_title">Informacion general</string>
     <string name="notes_inicio">Notas</string>
-    <string name="pro_inicio">Programados</string>
+    <string name="pro_inicio">Tareas</string>
     <string name="today_inicio">Hoy</string>
 
 </resources>
