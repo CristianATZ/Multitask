@@ -33,6 +33,7 @@
     <string name="title_tareas">Titulo tarea</string>
     <string name="desc_tarea">Ingresa la tarea</string>
     <string name="tip_homeworks">Agrega tus tareas para que no se olvide hacerlas.</string>
+    <string name="btnAceptar">Aceptar</string>
 
     // inicio screen
     <string name="rail_title">Multitask</string>

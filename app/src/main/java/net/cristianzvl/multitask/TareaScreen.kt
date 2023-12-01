@@ -1,6 +1,8 @@
 package net.cristianzvl.multitask
 
+import android.app.DatePickerDialog
 import android.os.Build
+import android.widget.DatePicker
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,6 +31,7 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.ThumbUp
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
@@ -41,6 +45,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,24 +56,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import net.cristianzvl.multitask.Model.Work
+import net.cristianzvl.multitask.Room.WorksData
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
 import net.cristianzvl.multitask.utils.MultiNavigationType
-
-data class TareasItem(
-    val name: String,
-    val desc: String,
-    val day: String,
-    val hour: String
-)
+import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Calendar
+import java.util.Locale
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -90,7 +100,7 @@ fun TareaScreen(multiViewModel: MultitaskViewModel, navigationType: MultiNavigat
                     ){
                         items(tareas_items.size){ index ->
                             val item = tareas_items[index]
-                            //TareaBody(item)
+                            TareaBody(item,multiViewModel)
                         }
                     }
                 } else {
@@ -135,6 +145,7 @@ private fun TopBar() {
     )
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun FABody(
     multiViewModel: MultitaskViewModel
@@ -173,13 +184,84 @@ private fun FABody(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TareaBody(
-    item: Work
+    item: WorksData,
+    multiViewModel: MultitaskViewModel
 ) {
+    val msg = buildAnnotatedString {
+        append(stringResource(id = R.string.lblConfirmarP1_notas) + " ")
+        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+            append(item.titlework)
+        }
+        append(" " + stringResource(id = R.string.lblConfirmarP2_notas))
+    }
+
     var eliminar by remember {
         mutableStateOf(false)
+    }
+
+    var openDialog by remember {
+        mutableStateOf(false)
+    }
+
+    if(openDialog){
+        DialogAddTarea(
+            onClick = { openDialog = !openDialog },
+            multiViewModel = multiViewModel,
+            update = true,
+            tarea = item
+        )
+    }
+
+    if(eliminar){
+        Dialog(
+            onDismissRequest = { /*TODO*/ }
+        ) {
+            Card(
+                Modifier.fillMaxWidth(0.85f)
+            ) {
+                Column(
+                    Modifier.padding(PaddingValues(16.dp))
+                ) {
+                    Text(
+                        text = msg,
+                        Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.size(16.dp))
+                    // boton eliminar
+                    Button(
+                        onClick = {
+                            // eliminar
+                            multiViewModel.deleteWork(item)
+                            eliminar = false
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                    ) {
+                        Text(text = stringResource(id = R.string.btnEliminar))
+                    }
+
+
+                    // boton cancelar
+                    TextButton(
+                        onClick = {
+                            eliminar = !eliminar
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                    ) {
+                        Text(text = stringResource(id = R.string.btnCancelar))
+                    }
+                }
+            }
+        }
     }
 
     Card(
@@ -187,12 +269,11 @@ private fun TareaBody(
             .padding(PaddingValues(16.dp))
             .combinedClickable(
                 onClick = {
-                    if (eliminar) eliminar = !eliminar
-                    else {
-                        // abrir la nota para poder editarla
-                    }
+                    openDialog = !openDialog
                 },
-                onLongClick = { eliminar = !eliminar }
+                onLongClick = {
+                    eliminar = !eliminar
+                }
             )
     ) {
         Row(
@@ -208,7 +289,7 @@ private fun TareaBody(
                     .fillMaxWidth(0.7f)
             ) {
                 Text(
-                    text = item.title,
+                    text = item.titlework,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.titleMedium,
@@ -218,7 +299,7 @@ private fun TareaBody(
                 Spacer(modifier = Modifier.size(16.dp))
 
                 Text(
-                    text = item.desc,
+                    text = item.descwork,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium
@@ -236,15 +317,16 @@ private fun TareaBody(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "",
+                        text = "${item.datework.format(DateTimeFormatter.ofPattern("dd-MMM"))}",
                         style = MaterialTheme.typography.bodySmall
                     )
 
                     Spacer(modifier = Modifier.size(8.dp))
 
                     Text(
-                        text = "",
-                        style = MaterialTheme.typography.labelSmall
+                        text = "${item.hour.format(DateTimeFormatter.ofPattern("HH:hh"))}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -252,19 +334,67 @@ private fun TareaBody(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DialogAddTarea(
     onClick: () -> Unit,
-    multiViewModel: MultitaskViewModel
+    multiViewModel: MultitaskViewModel,
+    update: Boolean = false,
+    tarea: WorksData = WorksData(0,"","", LocalDate.now(), LocalTime.now())
 ) {
+    val timePickerState = rememberTimePickerState()
+
     var title by remember {
-        mutableStateOf("")
+        mutableStateOf(if(update) tarea.titlework else "")
     }
 
-    var nota by remember {
-        mutableStateOf("")
+    var desc by remember {
+        mutableStateOf(if(update) tarea.descwork else "")
     }
+
+    var hour by remember {
+        mutableStateOf(false)
+    }
+    var hourSelected: LocalTime by remember {
+        mutableStateOf(if(update) tarea.hour else LocalTime.now())
+    }
+
+
+    // calendario
+    val calendar = Calendar.getInstance()
+
+    // Fetching current year, month and day
+    val year = calendar[Calendar.YEAR]
+    val month = calendar[Calendar.MONTH]
+    val dayOfMonth = calendar[Calendar.DAY_OF_MONTH]
+
+    var date: LocalDate by remember {
+        mutableStateOf(if(update) tarea.datework else LocalDate.now())
+    }
+
+    val context1 = LocalContext.current
+    val datePicker = DatePickerDialog(
+        context1,
+        { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDayOfMonth: Int ->
+            date = LocalDate.of(selectedYear, selectedMonth+1, selectedDayOfMonth)
+        }, year, month, dayOfMonth
+    )
+
+
+    if(hour){
+        DialogSelectHour(
+            onDismiss = {
+                hour = !hour
+            },
+            state = timePickerState,
+            selected = { hour ->
+                hourSelected = hour
+            }
+        )
+    }
+
+
 
     Dialog(
         onDismissRequest = { /*TODO*/ },
@@ -301,10 +431,10 @@ private fun DialogAddTarea(
                 Spacer(modifier = Modifier.weight(1f))
 
                 TextButton(
-                    onClick = { /*TODO*/ },
+                    onClick = { datePicker.show() },
                 ) {
                     Text(
-                        text = "Hoy",
+                        text = "${date.format(DateTimeFormatter.ofPattern("dd-MMM"))}",
                         style = typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -313,10 +443,10 @@ private fun DialogAddTarea(
                 Spacer(modifier = Modifier.size(16.dp))
 
                 TextButton(
-                    onClick = { /*TODO*/ },
+                    onClick = { hour = !hour },
                 ) {
                     Text(
-                        text = "17:00",
+                        text = "${hourSelected.format(DateTimeFormatter.ofPattern("HH:hh"))}",
                         style = typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -362,8 +492,8 @@ private fun DialogAddTarea(
                     .padding(PaddingValues(16.dp))
             ) {
                 OutlinedTextField(
-                    value = nota,
-                    onValueChange = { nota = it },
+                    value = desc,
+                    onValueChange = { desc = it },
                     placeholder = {
                         Text(
                             text = stringResource(id = R.string.title_tareas),
@@ -452,7 +582,9 @@ private fun DialogAddTarea(
 
                 // abrir archivos
                 IconButton(
-                    onClick = { documentos = !documentos }
+                    onClick = { documentos = !documentos },
+                    modifier = Modifier
+                        .width(75.dp)
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -462,7 +594,7 @@ private fun DialogAddTarea(
                             contentDescription = null
                         )
                         Text(
-                            text = "Galeri",
+                            text = "Galeria",
                             style = typography.bodySmall
                         )
                     }
@@ -473,12 +605,27 @@ private fun DialogAddTarea(
                 // guardar tarea
                 IconButton(
                     onClick = {
-                        /*multiViewModel.addWork(
-                            Work(
-                                title,
-                                nota
+                        if(!update){
+                            val item = WorksData(
+                                id = 0,
+                                titlework = title,
+                                descwork = desc,
+                                datework = LocalDate.now(),
+                                hour = hourSelected
                             )
-                        )*/
+                            multiViewModel.addWork(item)
+                        } else {
+                            val item = WorksData(
+                                id = tarea.id,
+                                titlework = title,
+                                descwork = desc,
+                                datework = date,
+                                hour = hourSelected
+                            )
+                            if(title != tarea.titlework || desc != tarea.descwork || hourSelected != tarea.hour || date != tarea.datework){
+                                multiViewModel.updateWork(item)
+                            }
+                        }
                         onClick()
                     },
                     modifier = Modifier
@@ -489,10 +636,58 @@ private fun DialogAddTarea(
                     ) {
                         Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
                         Text(
-                            text = "Guardar",
+                            text = "Gdar",
                             style = typography.bodySmall
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DialogSelectHour(
+    onDismiss: () -> Unit,
+    state: TimePickerState,
+    selected: (LocalTime) -> Unit
+) {
+    Dialog(onDismissRequest = { onDismiss() }) {
+        Card {
+            Column(
+                Modifier.padding(PaddingValues(16.dp)),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                TimePicker(state = state)
+                Button(
+                    onClick = {
+                        selected(
+                            LocalTime.of(
+                                state.hour,
+                                state.minute
+                            )
+                        )
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(text = stringResource(id = R.string.btnAceptar))
+                }
+                TextButton(
+                    onClick = {
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(text = stringResource(id = R.string.btnCancelar))
                 }
             }
         }

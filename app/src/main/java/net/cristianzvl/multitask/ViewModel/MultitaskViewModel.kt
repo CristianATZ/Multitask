@@ -17,9 +17,12 @@ import net.cristianzvl.multitask.Room.WorksData
 
 
 class MultitaskViewModel(applicationContext: Context) : ViewModel() {
+    // viewmodel
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
-    val db = Room.databaseBuilder(applicationContext, TaskDB::class.java, Constants.DB.NAME).build()
+
+    // base de datos
+    private val db = Room.databaseBuilder(applicationContext, TaskDB::class.java, Constants.DB.NAME).build()
 
     init {
         viewModelScope.launch(Dispatchers.IO){
@@ -39,12 +42,6 @@ class MultitaskViewModel(applicationContext: Context) : ViewModel() {
         }
     }
 
-    private fun recomposeView(){
-        _uiState.update { currentState ->
-            currentState.copy(countNotes = currentState.countNotes + 1)
-        }
-    }
-
     // inicio recompose app -----------------------------------------------------------------
     fun updateAllNotes(){
         _uiState.update { currentState ->
@@ -53,10 +50,8 @@ class MultitaskViewModel(applicationContext: Context) : ViewModel() {
     }
 
     fun updateAllWorks(){
-        viewModelScope.launch(Dispatchers.IO){
-            _uiState.update { currentState ->
-                currentState.copy(works = db.WorksDao().getAllItems())
-            }
+        _uiState.update { currentState ->
+            currentState.copy(works = db.WorksDao().getAllItems())
         }
     }
     // fin recompose app ---------------------------------------------------------------------
@@ -94,22 +89,28 @@ class MultitaskViewModel(applicationContext: Context) : ViewModel() {
     fun addWork(
         work: WorksData
     ){
-        db.WorksDao().insert(work)
-        updateAllWorks()
+        viewModelScope.launch(Dispatchers.IO){
+            db.WorksDao().insert(work)
+            updateAllWorks()
+        }
     }
 
     fun updateWork(
         work: WorksData
     ){
-        db.WorksDao().update(work)
-        updateAllWorks()
+        viewModelScope.launch(Dispatchers.IO){
+            db.WorksDao().update(work)
+            updateAllWorks()
+        }
     }
 
     fun deleteWork(
         work: WorksData
     ){
-        db.WorksDao().delete(work)
-        updateAllWorks()
+        viewModelScope.launch(Dispatchers.IO){
+            db.WorksDao().delete(work)
+            updateAllWorks()
+        }
     }
     // fin tareas -------------------------------------------------------------
 }

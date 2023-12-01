@@ -3,7 +3,9 @@ package net.cristianzvl.multitask.Room
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 
 // tabla para notas
 @Entity(tableName = Constants.NotesTable.TABLE_NAME)
@@ -20,6 +22,6 @@ data class WorksData(
     @PrimaryKey(autoGenerate = true) val id: Int,
     @ColumnInfo(name = Constants.WorksTable.NAME) val titlework: String,
     @ColumnInfo(name = Constants.WorksTable.DESC) val descwork: String,
-    // date
-    // hour
+    @ColumnInfo(name = Constants.WorksTable.DATE) val datework: LocalDate,
+    @ColumnInfo(name = Constants.WorksTable.HOUR) val hour: LocalTime
 )

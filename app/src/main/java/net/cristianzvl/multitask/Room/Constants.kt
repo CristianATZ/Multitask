@@ -17,6 +17,8 @@ class Constants {
         const val TABLE_NAME = "workstable"
         const val NAME = "tilework"
         const val DESC = "notework"
+        const val DATE = "datework"
+        const val HOUR = "hour"
         // date
         // hour
     }
