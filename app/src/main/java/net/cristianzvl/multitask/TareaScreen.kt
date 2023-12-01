@@ -3,10 +3,18 @@ package net.cristianzvl.multitask
 import android.app.DatePickerDialog
 import android.content.Context
 import android.content.Intent
+import android.media.MediaScannerConnection
+import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import android.util.Log
 import android.widget.DatePicker
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +30,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -35,6 +44,7 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,11 +64,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -71,11 +84,16 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
+import coil.compose.rememberImagePainter
+import net.cristianzvl.multitask.Multimedia.ComposeFileProvider
 import net.cristianzvl.multitask.Notifications.createChannelNotification
 import net.cristianzvl.multitask.Notifications.workAlarm
 import net.cristianzvl.multitask.Room.WorksData
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
 import net.cristianzvl.multitask.utils.MultiNavigationType
+import java.io.File
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -121,7 +139,7 @@ fun TareaScreen(multiViewModel: MultitaskViewModel, navigationType: MultiNavigat
                                 TareaBody(item,multiViewModel)
                             }
                         }
-                        
+
                         item {
                             Spacer(modifier = Modifier.size(16.dp))
                             Text(
@@ -228,6 +246,8 @@ private fun TareaBody(
     item: WorksData,
     multiViewModel: MultitaskViewModel
 ) {
+    val context = LocalContext.current
+
     val msg = buildAnnotatedString {
         append(stringResource(id = R.string.lblConfirmarP1_notas) + " ")
         withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
@@ -301,6 +321,38 @@ private fun TareaBody(
         }
     }
 
+    var showImages by remember {
+        mutableStateOf(false)
+    }
+    if(showImages){
+        Dialog(
+            onDismissRequest = { showImages = !showImages },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            Card {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .fillMaxHeight(0.6f)
+                        .padding(16.dp)
+                ) {
+                    item.images.forEach(){ item ->
+                        AsyncImage(
+                            model = item,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                                .height(100.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     Card(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -310,6 +362,9 @@ private fun TareaBody(
                 },
                 onLongClick = {
                     eliminar = !eliminar
+                },
+                onDoubleClick = {
+                    showImages = !showImages
                 }
             )
     ) {
@@ -378,7 +433,7 @@ private fun DialogAddTarea(
     onClick: () -> Unit,
     multiViewModel: MultitaskViewModel,
     update: Boolean = false,
-    tarea: WorksData = WorksData(0,"","", LocalDate.now(), LocalTime.now())
+    tarea: WorksData = WorksData(0,"","", LocalDate.now(), LocalTime.now(), emptyList())
 ) {
     // variables para en canal de notificacion
     val context = LocalContext.current
@@ -442,6 +497,113 @@ private fun DialogAddTarea(
     }
 
 
+    // multimedia
+    var uri: Uri by remember { mutableStateOf(Uri.EMPTY) }
+
+    var imageUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+
+    var listUri by remember {
+        mutableStateOf(listOf<Uri>())
+    }
+
+    var openMult by remember {
+        mutableStateOf(false)
+    }
+
+    fun saveImageToStorage(uri: Uri, context: Context) {
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val fileName = "imagen_${System.currentTimeMillis()}.jpg" // Nombre del archivo
+        val directory = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+
+        val file = File(directory, fileName)
+
+        file.outputStream().use { outputStream ->
+            inputStream?.copyTo(outputStream)
+        }
+
+        // Notifica al sistema de la nueva imagen para que aparezca en la Galería
+        MediaScannerConnection.scanFile(
+            context,
+            arrayOf(file.absolutePath),
+            arrayOf("image/jpeg"),
+            null
+        )
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            uri?.let {
+                listUri = listUri + it // Agrega la Uri a la lista
+                saveImageToStorage(it, context)
+            }
+            imageUri = uri
+            openMult = !openMult
+        }
+    }
+
+    if(openMult){
+        Dialog(
+            onDismissRequest = { openMult = !openMult },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.Black
+                )
+            ) {
+                Column(
+                    Modifier
+                        .wrapContentHeight()
+                        .fillMaxWidth(0.7f)
+                        .padding(PaddingValues(16.dp))
+                ) {
+
+                    AsyncImage(
+                        model = imageUri,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxHeight(0.5f)
+                            .fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.size(16.dp))
+
+                    // guardar uri
+                    Button(
+                        onClick = {
+                            // abrir dialogo para guardar la imagen tomada
+                            openMult = !openMult
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                    ) {
+                        Text(text = stringResource(id = R.string.btnGuardar_notas))
+                    }
+
+                    // cancelar uri
+                    TextButton(
+                        onClick = {
+                            openMult = !openMult
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                    ) {
+                        Text(text = stringResource(id = R.string.btnEliminar))
+                    }
+                }
+            }
+        }
+    }
 
     Dialog(
         onDismissRequest = { /*TODO*/ },
@@ -611,7 +773,10 @@ private fun DialogAddTarea(
                         }
                     }
                     IconButton(
-                        onClick = { /*TODO*/ },
+                        onClick = {
+                            uri = ComposeFileProvider.getImageUri(context)
+                            cameraLauncher.launch(uri)
+                        },
                         modifier = Modifier
                             .width(75.dp)
                     ) {
@@ -658,7 +823,8 @@ private fun DialogAddTarea(
                                 titlework = title,
                                 descwork = desc,
                                 datework = date,
-                                hour = hourSelected
+                                hour = hourSelected,
+                                images = listUri
                             )
                             workAlarm(
                                 context = context,
@@ -675,7 +841,8 @@ private fun DialogAddTarea(
                                 titlework = title,
                                 descwork = desc,
                                 datework = date,
-                                hour = hourSelected
+                                hour = hourSelected,
+                                images = listUri
                             )
                             if(title != tarea.titlework || desc != tarea.descwork || hourSelected != tarea.hour || date != tarea.datework){
                                 multiViewModel.updateWork(item)

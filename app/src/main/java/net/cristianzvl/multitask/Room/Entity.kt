@@ -1,5 +1,6 @@
 package net.cristianzvl.multitask.Room
 
+import android.net.Uri
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -23,5 +24,6 @@ data class WorksData(
     @ColumnInfo(name = Constants.WorksTable.NAME) val titlework: String,
     @ColumnInfo(name = Constants.WorksTable.DESC) val descwork: String,
     @ColumnInfo(name = Constants.WorksTable.DATE) val datework: LocalDate,
-    @ColumnInfo(name = Constants.WorksTable.HOUR) val hour: LocalTime
+    @ColumnInfo(name = Constants.WorksTable.HOUR) val hour: LocalTime,
+    @ColumnInfo(name = Constants.WorksTable.IMAGE) val images: List<Uri>
 )

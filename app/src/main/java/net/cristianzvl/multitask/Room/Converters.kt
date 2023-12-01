@@ -1,8 +1,12 @@
 package net.cristianzvl.multitask.Room
 
+import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.room.TypeConverter
+import com.google.common.reflect.TypeToken
+import com.google.gson.Gson
+import java.lang.reflect.Type
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -33,4 +37,16 @@ class Converters {
     fun toLocalDate(value: String): LocalDate {
         return LocalDate.parse(value, formatter)
     }
+
+    @TypeConverter
+    fun fromUriList(uriList: List<Uri>?): String? {
+        return uriList?.joinToString(separator = ",") { it.toString() }
+    }
+
+    // Convertir String delimitada por comas a List<Uri>
+    @TypeConverter
+    fun toUriList(uriListString: String?): List<Uri>? {
+        return uriListString?.split(",")?.map { Uri.parse(it) }
+    }
+
 }
