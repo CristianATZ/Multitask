@@ -1,6 +1,8 @@
 package net.cristianzvl.multitask
 
 import android.app.DatePickerDialog
+import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.widget.DatePicker
 import androidx.annotation.RequiresApi
@@ -49,6 +51,7 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,12 +71,17 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import net.cristianzvl.multitask.Notifications.createChannelNotification
+import net.cristianzvl.multitask.Notifications.workAlarm
 import net.cristianzvl.multitask.Room.WorksData
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
 import net.cristianzvl.multitask.utils.MultiNavigationType
 import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Locale
@@ -324,7 +332,7 @@ private fun TareaBody(
                     Spacer(modifier = Modifier.size(8.dp))
 
                     Text(
-                        text = "${item.hour.format(DateTimeFormatter.ofPattern("HH:hh"))}",
+                        text = "${item.hour.format(DateTimeFormatter.ofPattern("HH:mm"))}",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -343,6 +351,16 @@ private fun DialogAddTarea(
     update: Boolean = false,
     tarea: WorksData = WorksData(0,"","", LocalDate.now(), LocalTime.now())
 ) {
+    // variables para en canal de notificacion
+    val context = LocalContext.current
+    val idCanal = "CanalTareas"
+    val idNotificacion = 0
+
+    // se crea el canal de notificacion en base a las variables anteriores
+    LaunchedEffect(Unit){
+        createChannelNotification(idCanal,context)
+    }
+
     val timePickerState = rememberTimePickerState()
 
     var title by remember {
@@ -356,7 +374,7 @@ private fun DialogAddTarea(
     var hour by remember {
         mutableStateOf(false)
     }
-    var hourSelected: LocalTime by remember {
+    var hourSelected by remember {
         mutableStateOf(if(update) tarea.hour else LocalTime.now())
     }
 
@@ -446,7 +464,7 @@ private fun DialogAddTarea(
                     onClick = { hour = !hour },
                 ) {
                     Text(
-                        text = "${hourSelected.format(DateTimeFormatter.ofPattern("HH:hh"))}",
+                        text = "${hourSelected.format(DateTimeFormatter.ofPattern("HH:mm"))}",
                         style = typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -610,9 +628,16 @@ private fun DialogAddTarea(
                                 id = 0,
                                 titlework = title,
                                 descwork = desc,
-                                datework = LocalDate.now(),
+                                datework = date,
                                 hour = hourSelected
                             )
+                            workAlarm(
+                                context = context,
+                                title = item.titlework,
+                                longDesc = item.descwork,
+                                time = 10000
+                            )
+
                             multiViewModel.addWork(item)
                         } else {
                             val item = WorksData(
@@ -636,7 +661,7 @@ private fun DialogAddTarea(
                     ) {
                         Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
                         Text(
-                            text = "Gdar",
+                            text = "Guardar",
                             style = typography.bodySmall
                         )
                     }

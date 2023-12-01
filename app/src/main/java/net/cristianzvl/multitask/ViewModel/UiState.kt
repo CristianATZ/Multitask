@@ -1,7 +1,5 @@
 package net.cristianzvl.multitask.ViewModel
 
-import net.cristianzvl.multitask.Model.Note
-import net.cristianzvl.multitask.Model.Work
 import net.cristianzvl.multitask.Room.NotesData
 import net.cristianzvl.multitask.Room.WorksData
 
