@@ -33,4 +33,3 @@ data class WorksData(
     @ColumnInfo(name = Constants.WorksTable.AUDIO) val audios: List<Uri>,
     @ColumnInfo(name = Constants.WorksTable.FILE) val files: List<Uri>
 )
-

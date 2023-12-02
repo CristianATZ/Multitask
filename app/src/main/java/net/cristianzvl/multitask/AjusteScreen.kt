@@ -1,5 +1,7 @@
 package net.cristianzvl.multitask
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,6 +48,7 @@ data class idiomaItem(
     val action: () -> Unit
 )
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AjusteScreen(multiViewModel: MultitaskViewModel) {
 

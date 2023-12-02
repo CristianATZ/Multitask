@@ -260,9 +260,9 @@ fun NotaBody(
                     style = typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                
+
                 Spacer(modifier = Modifier.size(16.dp))
-                
+
                 Text(
                     text = item.descnote,
                     maxLines = 2,
@@ -551,7 +551,7 @@ private fun FABody(
     var dialog by remember {
         mutableStateOf(false)
     }
-    
+
     if(dialog){
         DialogAddNote(
             multiViewModel = multiViewModel,
@@ -560,7 +560,7 @@ private fun FABody(
             }
         )
     }
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize(),
@@ -745,7 +745,7 @@ fun DialogAddNote(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            
+
             Spacer(modifier = Modifier.size(8.dp))
 
             // icono para cerrar el dialog
@@ -774,7 +774,7 @@ fun DialogAddNote(
                     style = typography.bodyLarge,
                     fontWeight = FontWeight.Bold
                 )
-                
+
                 Spacer(modifier = Modifier.size(16.dp))
             }
 

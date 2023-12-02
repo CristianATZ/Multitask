@@ -119,4 +119,3 @@ class MultitaskViewModel(applicationContext: Context) : ViewModel() {
     }
     // fin tareas -------------------------------------------------------------
 }
-
