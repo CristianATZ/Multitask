@@ -1,15 +1,10 @@
 package net.cristianzvl.multitask
 
 import android.app.DatePickerDialog
-import android.content.ContentValues
-import android.content.Context
 import android.content.Intent
-import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
 import android.widget.DatePicker
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -31,7 +26,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -86,7 +80,13 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import net.cristianzvl.multitask.Multimedia.AudioPlayer
 import net.cristianzvl.multitask.Multimedia.ComposeFileProvider
+import net.cristianzvl.multitask.Multimedia.DialogShowAudioSelected
+import net.cristianzvl.multitask.Multimedia.DialogShowFileSelected
+import net.cristianzvl.multitask.Multimedia.DialogShowImageTake
+import net.cristianzvl.multitask.Multimedia.DialogShowVideoTake
 import net.cristianzvl.multitask.Multimedia.VideoPlayer
+import net.cristianzvl.multitask.Multimedia.saveImageToGallery
+import net.cristianzvl.multitask.Multimedia.saveVideoToGallery
 import net.cristianzvl.multitask.Notifications.createChannelNotification
 import net.cristianzvl.multitask.Notifications.workAlarm
 import net.cristianzvl.multitask.Room.WorksData
@@ -269,7 +269,7 @@ private fun TareaBody(
     }
 
     if(eliminar){
-        DialogDelete(
+        DialogDeleteWork(
             onDismiss = { eliminar = !eliminar },
             item = item,
             msg = msg,
@@ -278,7 +278,7 @@ private fun TareaBody(
     }
 
     if(showMultimedia){
-        DialogShowMultimedia(
+        DialogShowMultimediaWork(
             onDismiss = { showMultimedia = !showMultimedia },
             item = item
         )
@@ -358,7 +358,7 @@ private fun TareaBody(
 }
 
 @Composable
-fun DialogShowMultimedia(
+fun DialogShowMultimediaWork(
     onDismiss: () -> Unit,
     item: WorksData
 ) {
@@ -551,7 +551,7 @@ fun DialogShowMultimedia(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DialogDelete(
+fun DialogDeleteWork(
     multiViewModel: MultitaskViewModel,
     msg: AnnotatedString,
     onDismiss: () -> Unit,
@@ -689,33 +689,6 @@ private fun DialogAddTarea(
         mutableStateOf(false)
     }
 
-    // funcion para guardar la imagen en la galeria
-    fun saveImageToGallery(uri: Uri, context: Context, displayName: String) {
-        // Insertar la imagen en la galería utilizando MediaStore.Images.Media
-        val contentResolver = context.contentResolver
-        val imageContentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-        }
-
-        val imageUriResult = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, imageContentValues)
-
-        // Copiar el contenido de la imagen a la ubicación proporcionada por el contentResolver
-        contentResolver.openOutputStream(imageUriResult!!)?.use { outputStream ->
-            contentResolver.openInputStream(uri)?.use { inputStream ->
-                inputStream.copyTo(outputStream)
-            }
-        }
-
-        // Notifica al sistema de la nueva imagen para que aparezca en la Galería
-        MediaScannerConnection.scanFile(
-            context,
-            arrayOf(imageUriResult.path),
-            arrayOf("image/jpeg"),
-            null
-        )
-    }
-
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
@@ -747,33 +720,6 @@ private fun DialogAddTarea(
     }
     var showVideo by remember {
         mutableStateOf(false)
-    }
-
-    // funcion para guardar los videos en la galeria
-    fun saveVideoToGallery(videoUri: Uri, context: Context, displayName: String) {
-        // Insertar el video en la galería utilizando MediaStore.Video.Media
-        val contentResolver = context.contentResolver
-        val videoContentValues = ContentValues().apply {
-            put(MediaStore.Video.Media.DISPLAY_NAME, displayName)
-            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-        }
-
-        val videoUriResult = contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, videoContentValues)
-
-        // Copiar el contenido del video a la ubicación proporcionada por el contentResolver
-        contentResolver.openOutputStream(videoUriResult!!)?.use { outputStream ->
-            contentResolver.openInputStream(videoUri)?.use { inputStream ->
-                inputStream.copyTo(outputStream)
-            }
-        }
-
-        // Notificar al sistema del nuevo video para que aparezca en la Galería
-        MediaScannerConnection.scanFile(
-            context,
-            arrayOf(videoUriResult.path),
-            arrayOf("video/mp4"),
-            null
-        )
     }
 
     val videoLauncher = rememberLauncherForActivityResult(
@@ -1174,170 +1120,6 @@ private fun DialogAddTarea(
                             )
                         }
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DialogShowFileSelected(onDismiss: () -> Unit) {
-    Dialog(
-        onDismissRequest = { onDismiss() },
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false
-        )
-    ) {
-        Card {
-            Column(
-                Modifier
-                    .wrapContentHeight()
-                    .fillMaxWidth(0.7f)
-                    .padding(PaddingValues(16.dp))
-            ) {
-                Text(text = "Documento PDF cargado con exito.")
-
-                Spacer(modifier = Modifier.size(16.dp))
-
-                Button(
-                    onClick = {
-                        onDismiss()
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
-                ) {
-                    Text(text = stringResource(id = R.string.btnAceptar))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DialogShowAudioSelected(
-    onDismiss: () -> Unit,
-    fileUri: Uri?
-) {
-    Dialog(
-        onDismissRequest = { onDismiss() },
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false
-        )
-    ) {
-        Card {
-            Column(
-                Modifier
-                    .wrapContentHeight()
-                    .fillMaxWidth(0.7f)
-                    .padding(PaddingValues(16.dp))
-            ) {
-                //Text(text = "Documento PDF cargado con exito.")
-                AudioPlayer(
-                    audioUri = fileUri
-                )
-
-                Spacer(modifier = Modifier.size(16.dp))
-
-                Button(
-                    onClick = {
-                        onDismiss()
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
-                ) {
-                    Text(text = stringResource(id = R.string.btnAceptar))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DialogShowVideoTake(
-    onDismiss: () -> Unit,
-    videoUri: Uri?
-) {
-    Dialog(
-        onDismissRequest = { onDismiss() },
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false
-        )
-    ) {
-        Card {
-            Column(
-                Modifier
-                    .wrapContentHeight()
-                    .fillMaxWidth(0.7f)
-                    .padding(PaddingValues(16.dp))
-            ) {
-                VideoPlayer(
-                    videoUri = videoUri,
-                    modifier = Modifier
-                        .fillMaxHeight(0.5f)
-                        .fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.size(16.dp))
-
-                Button(
-                    onClick = {
-                        onDismiss()
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
-                ) {
-                    Text(text = stringResource(id = R.string.btnAceptar))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DialogShowImageTake(
-    onDismiss: () -> Unit,
-    imageUri: Uri
-) {
-    Dialog(
-        onDismissRequest = { onDismiss() },
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false
-        )
-    ) {
-        Card {
-            Column(
-                Modifier
-                    .wrapContentHeight()
-                    .fillMaxWidth(0.7f)
-                    .padding(PaddingValues(16.dp))
-            ) {
-                AsyncImage(
-                    model = imageUri,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxHeight(0.5f)
-                        .fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.size(16.dp))
-
-                // guardar uri
-                Button(
-                    onClick = {
-                        onDismiss()
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
-                ) {
-                    Text(text = stringResource(id = R.string.btnAceptar))
                 }
             }
         }

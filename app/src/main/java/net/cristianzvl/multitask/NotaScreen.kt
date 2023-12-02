@@ -1,8 +1,14 @@
 package net.cristianzvl.multitask
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -45,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,7 +61,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -64,8 +74,18 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
+import net.cristianzvl.multitask.Multimedia.AudioPlayer
+import net.cristianzvl.multitask.Multimedia.ComposeFileProvider
+import net.cristianzvl.multitask.Multimedia.DialogShowAudioSelected
+import net.cristianzvl.multitask.Multimedia.DialogShowFileSelected
+import net.cristianzvl.multitask.Multimedia.DialogShowImageTake
+import net.cristianzvl.multitask.Multimedia.DialogShowVideoTake
+import net.cristianzvl.multitask.Multimedia.VideoPlayer
+import net.cristianzvl.multitask.Notifications.createChannelNotification
 import net.cristianzvl.multitask.Room.NotesData
+import net.cristianzvl.multitask.Room.WorksData
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
 import net.cristianzvl.multitask.utils.MultiNavigationType
 import java.time.LocalDate
@@ -177,6 +197,10 @@ fun NotaBody(
         mutableStateOf(false)
     }
 
+    var showMultimedia by remember {
+        mutableStateOf(false)
+    }
+
     if(openDialog){
         DialogAddNote(
             onClick = { openDialog = !openDialog },
@@ -187,51 +211,19 @@ fun NotaBody(
     }
 
     if(eliminar){
-        Dialog(
-            onDismissRequest = { /*TODO*/ }
-        ) {
-            Card(
-                Modifier.fillMaxWidth(0.85f)
-            ) {
-                Column(
-                    Modifier.padding(PaddingValues(16.dp))
-                ) {
-                    Text(
-                        text = msg,
-                        Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.size(16.dp))
-                    // boton eliminar
-                    Button(
-                        onClick = {
-                            // eliminar
-                            multiViewModel.deleteNote(item)
-                            eliminar = false
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                    ) {
-                        Text(text = stringResource(id = R.string.btnEliminar))
-                    }
+        DialogDeleteNote(
+            onDismiss = { eliminar = !eliminar },
+            item = item,
+            msg = msg,
+            multiViewModel = multiViewModel
+        )
+    }
 
-
-                    // boton cancelar
-                    TextButton(
-                        onClick = {
-                            eliminar = !eliminar
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                    ) {
-                        Text(text = stringResource(id = R.string.btnCancelar))
-                    }
-                }
-            }
-        }
+    if(showMultimedia){
+        DialogShowMultimediaNote(
+            onDismiss = { showMultimedia = !showMultimedia },
+            item = item
+        )
     }
 
     Card(
@@ -243,6 +235,9 @@ fun NotaBody(
                 },
                 onLongClick = {
                     eliminar = !eliminar
+                },
+                onDoubleClick = {
+                    showMultimedia = !showMultimedia
                 }
             )
     ) {
@@ -287,13 +282,260 @@ fun NotaBody(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = item.daynote,
+                        text = item.datenote.dayOfMonth.toString(),
                         style = typography.bodySmall
                     )
                     Text(
-                        text = item.monthnote,
+                        text = item.datenote.month.toString(),
                         style = typography.bodySmall
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DialogShowMultimediaNote(
+    onDismiss: () -> Unit,
+    item: NotesData
+) {
+    val context = LocalContext.current
+    var uri: Uri by remember { mutableStateOf(Uri.EMPTY) }
+    var showVideo by remember {
+        mutableStateOf(false)
+    }
+
+    var showImage by remember {
+        mutableStateOf(false)
+    }
+
+    var showAudio by remember {
+        mutableStateOf(false)
+    }
+
+    if(showImage){
+        Dialog(
+            onDismissRequest = { showImage = !showImage },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            AsyncImage(
+                model = uri,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize(0.6f)
+            )
+        }
+    }
+
+    if(showVideo){
+        Dialog(
+            onDismissRequest = { showVideo = !showVideo },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            VideoPlayer(
+                videoUri = uri,
+                modifier = Modifier
+                    .fillMaxSize(0.6f)
+            )
+        }
+    }
+
+    if(showAudio){
+        Dialog(onDismissRequest = { showAudio = !showAudio }) {
+            Card {
+                AudioPlayer(audioUri = uri)
+            }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = { onDismiss() },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Card {
+            Column(
+                Modifier
+                    .padding(PaddingValues(16.dp))
+                    .fillMaxWidth(0.8f)
+            ) {
+                // imagenes
+                Text(
+                    text = "Imagenes",
+                    style = typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    item {
+                        item.images.forEach { item ->
+                            AsyncImage(
+                                model = item,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .height(100.dp)
+                                    .clickable {
+                                        uri = item
+                                        showImage = !showImage
+                                    }
+                            )
+                            Spacer(modifier = Modifier.size(8.dp))
+                        }
+                    }
+                }
+
+                // videos
+                Text(
+                    text = "Videos",
+                    style = typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    item {
+                        item.videos.forEach { item ->
+                            Column(
+                                Modifier
+                                    .height(100.dp)
+                                    .width(56.dp)
+                                    .background(colorScheme.primary)
+                                    .clickable {
+                                        uri = item
+                                        showVideo = !showVideo
+                                    },
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) { }
+                            Spacer(modifier = Modifier.size(8.dp))
+                        }
+                    }
+                }
+
+                // audios
+                Text(
+                    text = "Audios",
+                    style = typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    item {
+                        item.audios.forEach { item ->
+                            Column(
+                                Modifier
+                                    .height(100.dp)
+                                    .width(56.dp)
+                                    .background(colorScheme.primary)
+                                    .clickable {
+                                        uri = item
+                                        showAudio = !showAudio
+                                    },
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) { }
+                            Spacer(modifier = Modifier.size(8.dp))
+                        }
+                    }
+                }
+
+                // files
+                Text(
+                    text = "PDF",
+                    style = typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    item {
+                        item.audios.forEach { item ->
+                            Column(
+                                Modifier
+                                    .height(100.dp)
+                                    .width(56.dp)
+                                    .background(colorScheme.primary)
+                                    .clickable {
+                                        uri = item
+                                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(uri, "application/pdf") // Cambia el tipo de MIME según el tipo de documento que estás mostrando
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                        }
+                                        context.startActivity(intent)
+                                    },
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) { }
+                            Spacer(modifier = Modifier.size(8.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun DialogDeleteNote(
+    multiViewModel: MultitaskViewModel,
+    msg: AnnotatedString,
+    onDismiss: () -> Unit,
+    item: NotesData
+) {
+    Dialog(
+        onDismissRequest = { onDismiss() }
+    ) {
+        Card(
+            Modifier.fillMaxWidth(0.85f)
+        ) {
+            Column(
+                Modifier.padding(PaddingValues(16.dp))
+            ) {
+                Text(
+                    text = msg,
+                    Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.size(16.dp))
+                // boton eliminar
+                Button(
+                    onClick = {
+                        // eliminar
+                        multiViewModel.deleteNote(item)
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(text = stringResource(id = R.string.btnEliminar))
+                }
+
+
+                // boton cancelar
+                TextButton(
+                    onClick = {
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(text = stringResource(id = R.string.btnCancelar))
                 }
             }
         }
@@ -347,8 +589,17 @@ fun DialogAddNote(
     onClick: () -> Unit,
     multiViewModel: MultitaskViewModel,
     update: Boolean = false,
-    nota: NotesData = NotesData(0,"","","","")
+    nota: NotesData = NotesData(0,"","", LocalDate.now(), emptyList(), emptyList(), emptyList(), emptyList())
 ) {
+    // variables para en canal de notificacion
+    val context = LocalContext.current
+    val idCanal = "CanalTareas"
+
+    // se crea el canal de notificacion en base a las variables anteriores
+    LaunchedEffect(Unit){
+        createChannelNotification(idCanal,context)
+    }
+
     var title by remember {
         mutableStateOf(if(update) nota.titlenote else "")
     }
@@ -357,6 +608,132 @@ fun DialogAddNote(
         mutableStateOf(if(update) nota.descnote else "")
     }
 
+// multimedia
+    var uri: Uri by remember { mutableStateOf(Uri.EMPTY) }
+
+    // tomar foto INICIO ---------------------------------------------------------------------------
+
+    var imageUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+    var listImageUri by remember {
+        mutableStateOf(listOf<Uri>())
+    }
+    var showImage by remember {
+        mutableStateOf(false)
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            uri.let {
+                listImageUri = listImageUri + it // Agrega la Uri a la lista
+            }
+            imageUri = uri
+            showImage = !showImage
+        }
+    }
+
+    if(showImage){
+        imageUri?.let {
+            DialogShowImageTake(
+                onDismiss = { showImage = !showImage },
+                imageUri = it
+            )
+        }
+    }
+    // tomar foto FIN ------------------------------------------------------------------------------
+
+    // tomar video INICIO --------------------------------------------------------------------------
+    var videoUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+    var listVideoUri by remember {
+        mutableStateOf(listOf<Uri>())
+    }
+    var showVideo by remember {
+        mutableStateOf(false)
+    }
+
+    val videoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CaptureVideo()
+    ) { success ->
+        if (success) {
+            uri.let {
+                listVideoUri = listVideoUri + it // Agrega la Uri a la lista
+            }
+            videoUri = uri
+            showVideo = !showVideo
+        }
+    }
+    if(showVideo){
+        DialogShowVideoTake(
+            onDismiss = { showVideo = !showVideo },
+            videoUri = videoUri
+        )
+    }
+    // tomar video FIN -----------------------------------------------------------------------------
+
+
+    // seleccionar audio INICIO ------------------------------------------------------------------
+    var audioUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+    var listAudioUri by remember {
+        mutableStateOf(listOf<Uri>())
+    }
+    var showAudio by remember {
+        mutableStateOf(false)
+    }
+
+    val audioPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri: Uri? ->
+        uri?.let {
+            // Aquí puedes manejar la URI del archivo seleccionado
+            listAudioUri = listAudioUri + it // Agrega la Uri del archivo a la lista
+        }
+        audioUri = uri
+        showAudio = !showAudio
+    }
+
+    if(showAudio){
+        DialogShowAudioSelected(
+            onDismiss = { showAudio = !showAudio },
+            fileUri = audioUri
+        )
+    }
+    // seleccionar audio FIN ---------------------------------------------------------------------
+
+    // seleccionar audio INICIO ------------------------------------------------------------------
+    var fileUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+    var listFileUri by remember {
+        mutableStateOf(listOf<Uri>())
+    }
+    var showFile by remember {
+        mutableStateOf(false)
+    }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri: Uri? ->
+        uri?.let {
+            // Aquí puedes manejar la URI del archivo seleccionado
+            listFileUri = listFileUri + it // Agrega la Uri del archivo a la lista
+        }
+        fileUri = uri
+        showFile = !showFile
+    }
+
+    if(showFile){
+        DialogShowFileSelected(
+            onDismiss = { showFile = !showFile }
+        )
+    }
+    // seleccionar audio FIN ---------------------------------------------------------------------
 
     Dialog(
         onDismissRequest = { /*TODO*/ },
@@ -480,8 +857,29 @@ fun DialogAddNote(
 
                 // opciones de documentos
                 if(documentos){
+                    // documentos
                     IconButton(
-                        onClick = { /*TODO*/ },
+                        onClick = {
+                            filePickerLauncher.launch("application/pdf")
+                        },
+                        modifier = Modifier
+                            .width(75.dp)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
+                            Text(
+                                text = "PDF",
+                                style = typography.bodySmall
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = {
+                            audioPickerLauncher.launch("audio/*")
+                        },
                         modifier = Modifier
                             .width(75.dp)
                     ) {
@@ -495,8 +893,12 @@ fun DialogAddNote(
                             )
                         }
                     }
+
                     IconButton(
-                        onClick = { /*TODO*/ },
+                        onClick = {
+                            uri = ComposeFileProvider.getImageUri(context)
+                            videoLauncher.launch(uri)
+                        },
                         modifier = Modifier
                             .width(75.dp)
                     ) {
@@ -510,8 +912,12 @@ fun DialogAddNote(
                             )
                         }
                     }
+
                     IconButton(
-                        onClick = { /*TODO*/ },
+                        onClick = {
+                            uri = ComposeFileProvider.getImageUri(context)
+                            cameraLauncher.launch(uri)
+                        },
                         modifier = Modifier
                             .width(75.dp)
                     ) {
@@ -527,9 +933,11 @@ fun DialogAddNote(
                     }
                 }
 
-                // abrir documentos
+                // abrir archivos
                 IconButton(
-                    onClick = { documentos = !documentos }
+                    onClick = { documentos = !documentos },
+                    modifier = Modifier
+                        .width(75.dp)
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -548,42 +956,50 @@ fun DialogAddNote(
                 Spacer(modifier = Modifier.size(16.dp))
 
                 // agregar nota
-                IconButton(
-                    onClick = {
-                        if(!update){
-                            val item = NotesData(
-                                id = 0,
-                                titlenote = title,
-                                descnote = desc,
-                                daynote = LocalDate.now().dayOfMonth.toString(),
-                                monthnote = LocalDate.now().month.toString()
-                            )
-                            multiViewModel.addNote(item)
-                        } else {
-                            val item = NotesData(
-                                id = nota.id,
-                                titlenote = title,
-                                descnote = desc,
-                                daynote = LocalDate.now().dayOfMonth.toString(),
-                                monthnote = LocalDate.now().month.toString()
-                            )
-                            if(title != nota.titlenote || desc != nota.descnote){
-                                multiViewModel.updateNote(item)
+                if(!documentos){
+                    IconButton(
+                        onClick = {
+                            if(!update){
+                                val item = NotesData(
+                                    id = 0,
+                                    titlenote = title,
+                                    descnote = desc,
+                                    datenote = LocalDate.now(),
+                                    images = listImageUri,
+                                    videos = listVideoUri,
+                                    audios = listAudioUri,
+                                    files = listFileUri
+                                )
+                                multiViewModel.addNote(item)
+                            } else {
+                                val item = NotesData(
+                                    id = nota.id,
+                                    titlenote = title,
+                                    descnote = desc,
+                                    datenote = LocalDate.now(),
+                                    images = listImageUri,
+                                    videos = listVideoUri,
+                                    audios = listAudioUri,
+                                    files = listFileUri
+                                )
+                                if(title != nota.titlenote || desc != nota.descnote){
+                                    multiViewModel.updateNote(item)
+                                }
                             }
-                        }
-                        onClick()
-                    },
-                    modifier = Modifier
-                        .width(75.dp)
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            onClick()
+                        },
+                        modifier = Modifier
+                            .width(75.dp)
                     ) {
-                        Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
-                        Text(
-                            text = "Guardar",
-                            style = typography.bodySmall
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
+                            Text(
+                                text = "Guardar",
+                                style = typography.bodySmall
+                            )
+                        }
                     }
                 }
             }

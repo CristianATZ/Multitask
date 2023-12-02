@@ -14,8 +14,11 @@ data class NotesData(
     @PrimaryKey(autoGenerate = true) val id: Int,
     @ColumnInfo(name = Constants.NotesTable.NAME) val titlenote: String,
     @ColumnInfo(name = Constants.NotesTable.DESC) val descnote: String,
-    @ColumnInfo(name = Constants.NotesTable.DAY) val daynote: String,
-    @ColumnInfo(name = Constants.NotesTable.MONTH) val monthnote: String,
+    @ColumnInfo(name = Constants.NotesTable.DATE) val datenote: LocalDate,
+    @ColumnInfo(name = Constants.NotesTable.IMAGE) val images: List<Uri>,
+    @ColumnInfo(name = Constants.NotesTable.VIDEO) val videos: List<Uri>,
+    @ColumnInfo(name = Constants.NotesTable.AUDIO) val audios: List<Uri>,
+    @ColumnInfo(name = Constants.NotesTable.FILE) val files: List<Uri>
 )
 
 @Entity(tableName = Constants.WorksTable.TABLE_NAME)
@@ -30,3 +33,4 @@ data class WorksData(
     @ColumnInfo(name = Constants.WorksTable.AUDIO) val audios: List<Uri>,
     @ColumnInfo(name = Constants.WorksTable.FILE) val files: List<Uri>
 )
+

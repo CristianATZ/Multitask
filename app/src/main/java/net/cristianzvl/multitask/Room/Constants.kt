@@ -9,8 +9,11 @@ class Constants {
         const val TABLE_NAME = "notestable"
         const val NAME = "tilenote"
         const val DESC = "notedesc"
-        const val DAY = "daynote"
-        const val MONTH = "monthnote"
+        const val DATE = "datenote"
+        const val IMAGE = "images"
+        const val VIDEO = "videos"
+        const val AUDIO = "audios"
+        const val FILE = "files"
     }
 
     object WorksTable {
