@@ -22,5 +22,6 @@ class Constants {
         const val IMAGE = "images"
         const val VIDEO = "videos"
         const val AUDIO = "audios"
+        const val FILE = "files"
     }
 }

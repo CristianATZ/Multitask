@@ -3,6 +3,7 @@ package net.cristianzvl.multitask
 import android.app.DatePickerDialog
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
@@ -361,6 +362,7 @@ fun DialogShowMultimedia(
     onDismiss: () -> Unit,
     item: WorksData
 ) {
+    val context = LocalContext.current
     var uri: Uri by remember { mutableStateOf(Uri.EMPTY) }
     var showVideo by remember {
         mutableStateOf(false)
@@ -509,6 +511,39 @@ fun DialogShowMultimedia(
                         }
                     }
                 }
+
+                // files
+                Text(
+                    text = "PDF",
+                    style = typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    item {
+                        item.audios.forEach { item ->
+                            Column(
+                                Modifier
+                                    .height(100.dp)
+                                    .width(56.dp)
+                                    .background(colorScheme.primary)
+                                    .clickable {
+                                        uri = item
+                                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(uri, "application/pdf") // Cambia el tipo de MIME según el tipo de documento que estás mostrando
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                        }
+                                        context.startActivity(intent)
+                                    },
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) { }
+                            Spacer(modifier = Modifier.size(8.dp))
+                        }
+                    }
+                }
             }
         }
     }
@@ -576,7 +611,7 @@ private fun DialogAddTarea(
     onClick: () -> Unit,
     multiViewModel: MultitaskViewModel,
     update: Boolean = false,
-    tarea: WorksData = WorksData(0,"","", LocalDate.now(), LocalTime.now(), emptyList(), emptyList(), emptyList())
+    tarea: WorksData = WorksData(0,"","", LocalDate.now(), LocalTime.now(), emptyList(), emptyList(), emptyList(), emptyList())
 ) {
     // variables para en canal de notificacion
     val context = LocalContext.current
@@ -761,7 +796,7 @@ private fun DialogAddTarea(
     // tomar video FIN -----------------------------------------------------------------------------
 
 
-    // seleccionar archivo INICIO ------------------------------------------------------------------
+    // seleccionar audio INICIO ------------------------------------------------------------------
     var audioUri by remember {
         mutableStateOf<Uri?>(null)
     }
@@ -778,7 +813,6 @@ private fun DialogAddTarea(
         uri?.let {
             // Aquí puedes manejar la URI del archivo seleccionado
             listAudioUri = listAudioUri + it // Agrega la Uri del archivo a la lista
-            Toast.makeText(context, listAudioUri.last().toString(), Toast.LENGTH_LONG).show()
         }
         audioUri = uri
         showAudio = !showAudio
@@ -790,7 +824,36 @@ private fun DialogAddTarea(
             fileUri = audioUri
         )
     }
-    // seleccionar archivo FIN ---------------------------------------------------------------------
+    // seleccionar audio FIN ---------------------------------------------------------------------
+
+    // seleccionar audio INICIO ------------------------------------------------------------------
+    var fileUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+    var listFileUri by remember {
+        mutableStateOf(listOf<Uri>())
+    }
+    var showFile by remember {
+        mutableStateOf(false)
+    }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri: Uri? ->
+        uri?.let {
+            // Aquí puedes manejar la URI del archivo seleccionado
+            listFileUri = listFileUri + it // Agrega la Uri del archivo a la lista
+        }
+        fileUri = uri
+        showFile = !showFile
+    }
+
+    if(showFile){
+        DialogShowFileSelected(
+            onDismiss = { showFile = !showFile }
+        )
+    }
+    // seleccionar audio FIN ---------------------------------------------------------------------
 
     Dialog(
         onDismissRequest = { /*TODO*/ },
@@ -929,6 +992,26 @@ private fun DialogAddTarea(
             ) {
                 // archivos
                 if(documentos){
+
+                    // documentos
+                    IconButton(
+                        onClick = {
+                            filePickerLauncher.launch("application/pdf")
+                        },
+                        modifier = Modifier
+                            .width(75.dp)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
+                            Text(
+                                text = "PDF",
+                                style = typography.bodySmall
+                            )
+                        }
+                    }
+
                     IconButton(
                         onClick = {
                             audioPickerLauncher.launch("audio/*")
@@ -946,6 +1029,7 @@ private fun DialogAddTarea(
                             )
                         }
                     }
+
                     IconButton(
                         onClick = {
                             uri = ComposeFileProvider.getImageUri(context)
@@ -964,6 +1048,7 @@ private fun DialogAddTarea(
                             )
                         }
                     }
+
                     IconButton(
                         onClick = {
                             uri = ComposeFileProvider.getImageUri(context)
@@ -1007,61 +1092,40 @@ private fun DialogAddTarea(
                 Spacer(modifier = Modifier.size(16.dp))
 
                 // guardar tarea
-                IconButton(
-                    onClick = {
-                        if(!update){
-                            // guardar las imagenes tomadas en la galeria
-                            listImageUri.forEachIndexed { _, uri ->
-                                saveImageToGallery(
-                                    uri,
-                                    context,
-                                    "image_${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
+                if(!documentos){
+                    IconButton(
+                        onClick = {
+                            if(!update){
+                                // guardar las imagenes tomadas en la galeria
+                                listImageUri.forEachIndexed { _, uri ->
+                                    saveImageToGallery(
+                                        uri,
+                                        context,
+                                        "image_${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
+                                    )
+                                }
+                                listVideoUri.forEachIndexed { _, uri ->
+                                    saveVideoToGallery(
+                                        uri,
+                                        context,
+                                        "video_${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
+                                    )
+                                }
+
+                                // crear el item para guardar la tarea
+                                val item = WorksData(
+                                    id = 0,
+                                    titlework = title,
+                                    descwork = desc,
+                                    datework = date,
+                                    hour = hourSelected,
+                                    images = listImageUri,
+                                    videos = listVideoUri,
+                                    audios = listAudioUri,
+                                    files = listFileUri
                                 )
-                            }
-                            /*listVideoUri.forEachIndexed { _, uri ->
-                                saveVideoToGallery(
-                                    uri,
-                                    context,
-                                    "video_${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
-                                )
-                            }*/
 
-                            // crear el item para guardar la tarea
-                            val item = WorksData(
-                                id = 0,
-                                titlework = title,
-                                descwork = desc,
-                                datework = date,
-                                hour = hourSelected,
-                                images = listImageUri,
-                                videos = listVideoUri,
-                                audios = listAudioUri
-                            )
-
-                            // generar la alarma para la tarea
-                            workAlarm(
-                                context = context,
-                                title = item.titlework,
-                                longDesc = item.descwork,
-                                expiration = item.hour,
-                                time = 10000
-                            )
-
-                            // agregar tarea a la base de datos
-                            multiViewModel.addWork(item)
-                        } else {
-                            val item = WorksData(
-                                id = tarea.id,
-                                titlework = title,
-                                descwork = desc,
-                                datework = date,
-                                hour = hourSelected,
-                                images = listImageUri,
-                                videos = listVideoUri,
-                                audios = listAudioUri
-                            )
-                            if(title != tarea.titlework || desc != tarea.descwork || hourSelected != tarea.hour || date != tarea.datework){
-                                multiViewModel.updateWork(item)
+                                // generar la alarma para la tarea
                                 workAlarm(
                                     context = context,
                                     title = item.titlework,
@@ -1069,22 +1133,82 @@ private fun DialogAddTarea(
                                     expiration = item.hour,
                                     time = 10000
                                 )
+
+                                // agregar tarea a la base de datos
+                                multiViewModel.addWork(item)
+                            } else {
+                                val item = WorksData(
+                                    id = tarea.id,
+                                    titlework = title,
+                                    descwork = desc,
+                                    datework = date,
+                                    hour = hourSelected,
+                                    images = listImageUri,
+                                    videos = listVideoUri,
+                                    audios = listAudioUri,
+                                    files = listFileUri
+                                )
+                                if(title != tarea.titlework || desc != tarea.descwork || hourSelected != tarea.hour || date != tarea.datework){
+                                    multiViewModel.updateWork(item)
+                                    workAlarm(
+                                        context = context,
+                                        title = item.titlework,
+                                        longDesc = item.descwork,
+                                        expiration = item.hour,
+                                        time = 10000
+                                    )
+                                }
                             }
-                        }
-                        onClick()
-                    },
-                    modifier = Modifier
-                        .width(75.dp)
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            onClick()
+                        },
+                        modifier = Modifier
+                            .width(75.dp)
                     ) {
-                        Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
-                        Text(
-                            text = "Guardar",
-                            style = typography.bodySmall
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
+                            Text(
+                                text = "Guardar",
+                                style = typography.bodySmall
+                            )
+                        }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DialogShowFileSelected(onDismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = { onDismiss() },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Card {
+            Column(
+                Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth(0.7f)
+                    .padding(PaddingValues(16.dp))
+            ) {
+                Text(text = "Documento PDF cargado con exito.")
+
+                Spacer(modifier = Modifier.size(16.dp))
+
+                Button(
+                    onClick = {
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(text = stringResource(id = R.string.btnAceptar))
                 }
             }
         }
