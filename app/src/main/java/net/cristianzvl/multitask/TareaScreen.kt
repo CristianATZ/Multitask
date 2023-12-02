@@ -1,20 +1,20 @@
 package net.cristianzvl.multitask
 
 import android.app.DatePickerDialog
+import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
-import android.util.Log
+import android.provider.MediaStore
 import android.widget.DatePicker
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -44,7 +45,6 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,11 +52,12 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerState
 import androidx.compose.material3.rememberTimePickerState
@@ -64,16 +65,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -85,31 +84,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
-import coil.compose.rememberImagePainter
 import net.cristianzvl.multitask.Multimedia.ComposeFileProvider
+import net.cristianzvl.multitask.Multimedia.VideoPlayer
 import net.cristianzvl.multitask.Notifications.createChannelNotification
 import net.cristianzvl.multitask.Notifications.workAlarm
 import net.cristianzvl.multitask.Room.WorksData
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
 import net.cristianzvl.multitask.utils.MultiNavigationType
-import java.io.File
-import java.text.SimpleDateFormat
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
-import java.util.Locale
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun TareaScreen(multiViewModel: MultitaskViewModel, navigationType: MultiNavigationType) {
     val multiUiState by multiViewModel.uiState.collectAsState()
 
-    val tareas_items = multiUiState.works
+    val tareasItems = multiUiState.works
 
     Row {
         Column(
@@ -133,8 +125,8 @@ fun TareaScreen(multiViewModel: MultitaskViewModel, navigationType: MultiNavigat
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             )
                         }
-                        items(tareas_items.size){ index ->
-                            val item = tareas_items[index]
+                        items(tareasItems.size){ index ->
+                            val item = tareasItems[index]
                             if(item.datework >= LocalDate.now()){
                                 TareaBody(item,multiViewModel)
                             }
@@ -150,8 +142,8 @@ fun TareaScreen(multiViewModel: MultitaskViewModel, navigationType: MultiNavigat
                             )
                         }
                         // lista de tareas caducadas o finalizadas
-                        items(tareas_items.size){ index ->
-                            val item = tareas_items[index]
+                        items(tareasItems.size){ index ->
+                            val item = tareasItems[index]
                             if(item.datework < LocalDate.now()){
                                 TareaBody(item,multiViewModel)
                             }
@@ -246,8 +238,6 @@ private fun TareaBody(
     item: WorksData,
     multiViewModel: MultitaskViewModel
 ) {
-    val context = LocalContext.current
-
     val msg = buildAnnotatedString {
         append(stringResource(id = R.string.lblConfirmarP1_notas) + " ")
         withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
@@ -264,6 +254,10 @@ private fun TareaBody(
         mutableStateOf(false)
     }
 
+    var showMultimedia by remember {
+        mutableStateOf(false)
+    }
+
     if(openDialog){
         DialogAddTarea(
             onClick = { openDialog = !openDialog },
@@ -274,83 +268,19 @@ private fun TareaBody(
     }
 
     if(eliminar){
-        Dialog(
-            onDismissRequest = { /*TODO*/ }
-        ) {
-            Card(
-                Modifier.fillMaxWidth(0.85f)
-            ) {
-                Column(
-                    Modifier.padding(PaddingValues(16.dp))
-                ) {
-                    Text(
-                        text = msg,
-                        Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.size(16.dp))
-                    // boton eliminar
-                    Button(
-                        onClick = {
-                            // eliminar
-                            multiViewModel.deleteWork(item)
-                            eliminar = false
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                    ) {
-                        Text(text = stringResource(id = R.string.btnEliminar))
-                    }
-
-
-                    // boton cancelar
-                    TextButton(
-                        onClick = {
-                            eliminar = !eliminar
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                    ) {
-                        Text(text = stringResource(id = R.string.btnCancelar))
-                    }
-                }
-            }
-        }
+        DialogDelete(
+            onDismiss = { eliminar = !eliminar },
+            item = item,
+            msg = msg,
+            multiViewModel = multiViewModel
+        )
     }
 
-    var showImages by remember {
-        mutableStateOf(false)
-    }
-    if(showImages){
-        Dialog(
-            onDismissRequest = { showImages = !showImages },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false
-            )
-        ) {
-            Card {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .fillMaxHeight(0.6f)
-                        .padding(16.dp)
-                ) {
-                    item.images.forEach(){ item ->
-                        AsyncImage(
-                            model = item,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                                .height(100.dp)
-                        )
-                    }
-                }
-            }
-        }
+    if(showMultimedia){
+        DialogShowMultimedia(
+            onDismiss = { showMultimedia = !showMultimedia },
+            item = item
+        )
     }
 
     Card(
@@ -364,7 +294,7 @@ private fun TareaBody(
                     eliminar = !eliminar
                 },
                 onDoubleClick = {
-                    showImages = !showImages
+                    showMultimedia = !showMultimedia
                 }
             )
     ) {
@@ -384,7 +314,7 @@ private fun TareaBody(
                     text = item.titlework,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
 
@@ -394,14 +324,14 @@ private fun TareaBody(
                     text = item.descwork,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = typography.bodyMedium
                 )
             }
             Spacer(modifier = Modifier.weight(1f))
             if(eliminar){
                 Checkbox(
                     checked = eliminar,
-                    onCheckedChange = {}
+                    onCheckedChange = { eliminar = !eliminar }
                 )
             } else {
                 Column(
@@ -409,17 +339,189 @@ private fun TareaBody(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "${item.datework.format(DateTimeFormatter.ofPattern("dd-MMM"))}",
-                        style = MaterialTheme.typography.bodySmall
+                        text = item.datework.format(DateTimeFormatter.ofPattern("dd-MMM")),
+                        style = typography.bodySmall
                     )
 
                     Spacer(modifier = Modifier.size(8.dp))
 
                     Text(
-                        text = "${item.hour.format(DateTimeFormatter.ofPattern("HH:mm"))}",
-                        style = MaterialTheme.typography.labelSmall,
+                        text = item.hour.format(DateTimeFormatter.ofPattern("HH:mm")),
+                        style = typography.labelSmall,
                         fontWeight = FontWeight.Bold
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DialogShowMultimedia(
+    onDismiss: () -> Unit,
+    item: WorksData
+) {
+    var uri: Uri by remember { mutableStateOf(Uri.EMPTY) }
+    var showVideo by remember {
+        mutableStateOf(false)
+    }
+
+    var showImage by remember {
+        mutableStateOf(false)
+    }
+
+    if(showImage){
+        Dialog(
+            onDismissRequest = { showImage = !showImage },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            AsyncImage(
+                model = uri,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize(0.6f)
+            )
+        }
+    }
+
+    if(showVideo){
+        Dialog(
+            onDismissRequest = { showVideo = !showVideo },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            VideoPlayer(
+                videoUri = uri,
+                modifier = Modifier
+                    .fillMaxSize(0.6f)
+            )
+        }
+    }
+
+    Dialog(
+        onDismissRequest = { onDismiss() },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Card {
+            Column(
+                Modifier
+                    .padding(PaddingValues(16.dp))
+                    .fillMaxWidth(0.8f)
+            ) {
+                // imagenes
+                Text(
+                    text = "Imagenes",
+                    style = typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    item {
+                        item.images.forEach { item ->
+                            AsyncImage(
+                                model = item,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .height(100.dp)
+                                    .clickable {
+                                        uri = item
+                                        showImage = !showImage
+                                    }
+                            )
+                            Spacer(modifier = Modifier.size(8.dp))
+                        }
+                    }
+                }
+
+                // videos
+                Text(
+                    text = "Videos",
+                    style = typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    item {
+                        item.videos.forEach { item ->
+                            Column(
+                                Modifier
+                                    .height(100.dp)
+                                    .width(56.dp)
+                                    .background(colorScheme.primary)
+                                    .clickable {
+                                        uri = item
+                                        showVideo = !showVideo
+                                    },
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) { }
+                            Spacer(modifier = Modifier.size(8.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun DialogDelete(
+    multiViewModel: MultitaskViewModel,
+    msg: AnnotatedString,
+    onDismiss: () -> Unit,
+    item: WorksData
+) {
+    Dialog(
+        onDismissRequest = { onDismiss() }
+    ) {
+        Card(
+            Modifier.fillMaxWidth(0.85f)
+        ) {
+            Column(
+                Modifier.padding(PaddingValues(16.dp))
+            ) {
+                Text(
+                    text = msg,
+                    Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.size(16.dp))
+                // boton eliminar
+                Button(
+                    onClick = {
+                        // eliminar
+                        multiViewModel.deleteWork(item)
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(text = stringResource(id = R.string.btnEliminar))
+                }
+
+
+                // boton cancelar
+                TextButton(
+                    onClick = {
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(text = stringResource(id = R.string.btnCancelar))
                 }
             }
         }
@@ -433,12 +535,11 @@ private fun DialogAddTarea(
     onClick: () -> Unit,
     multiViewModel: MultitaskViewModel,
     update: Boolean = false,
-    tarea: WorksData = WorksData(0,"","", LocalDate.now(), LocalTime.now(), emptyList())
+    tarea: WorksData = WorksData(0,"","", LocalDate.now(), LocalTime.now(), emptyList(), emptyList())
 ) {
     // variables para en canal de notificacion
     val context = LocalContext.current
     val idCanal = "CanalTareas"
-    val idNotificacion = 0
 
     // se crea el canal de notificacion en base a las variables anteriores
     LaunchedEffect(Unit){
@@ -500,33 +601,40 @@ private fun DialogAddTarea(
     // multimedia
     var uri: Uri by remember { mutableStateOf(Uri.EMPTY) }
 
+    // tomar foto INICIO ---------------------------------------------------------------------------
+
     var imageUri by remember {
         mutableStateOf<Uri?>(null)
     }
-
-    var listUri by remember {
+    var listImageUri by remember {
         mutableStateOf(listOf<Uri>())
     }
-
-    var openMult by remember {
+    var showImage by remember {
         mutableStateOf(false)
     }
 
-    fun saveImageToStorage(uri: Uri, context: Context) {
-        val inputStream = context.contentResolver.openInputStream(uri)
-        val fileName = "imagen_${System.currentTimeMillis()}.jpg" // Nombre del archivo
-        val directory = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+    // funcion para guardar la imagen en la galeria
+    fun saveImageToStorage(uri: Uri, context: Context, displayName: String) {
+        // Insertar la imagen en la galería utilizando MediaStore.Images.Media
+        val contentResolver = context.contentResolver
+        val imageContentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+        }
 
-        val file = File(directory, fileName)
+        val imageUriResult = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, imageContentValues)
 
-        file.outputStream().use { outputStream ->
-            inputStream?.copyTo(outputStream)
+        // Copiar el contenido de la imagen a la ubicación proporcionada por el contentResolver
+        contentResolver.openOutputStream(imageUriResult!!)?.use { outputStream ->
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                inputStream.copyTo(outputStream)
+            }
         }
 
         // Notifica al sistema de la nueva imagen para que aparezca en la Galería
         MediaScannerConnection.scanFile(
             context,
-            arrayOf(file.absolutePath),
+            arrayOf(imageUriResult.path),
             arrayOf("image/jpeg"),
             null
         )
@@ -536,74 +644,55 @@ private fun DialogAddTarea(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) {
-            uri?.let {
-                listUri = listUri + it // Agrega la Uri a la lista
-                saveImageToStorage(it, context)
+            uri.let {
+                listImageUri = listImageUri + it // Agrega la Uri a la lista
             }
             imageUri = uri
-            openMult = !openMult
+            showImage = !showImage
         }
     }
 
-    if(openMult){
-        Dialog(
-            onDismissRequest = { openMult = !openMult },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false
+    if(showImage){
+        imageUri?.let {
+            DialogShowImageTake(
+                onDismiss = { showImage = !showImage },
+                imageUri = it
             )
-        ) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.Black
-                )
-            ) {
-                Column(
-                    Modifier
-                        .wrapContentHeight()
-                        .fillMaxWidth(0.7f)
-                        .padding(PaddingValues(16.dp))
-                ) {
-
-                    AsyncImage(
-                        model = imageUri,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxHeight(0.5f)
-                            .fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.size(16.dp))
-
-                    // guardar uri
-                    Button(
-                        onClick = {
-                            // abrir dialogo para guardar la imagen tomada
-                            openMult = !openMult
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                    ) {
-                        Text(text = stringResource(id = R.string.btnGuardar_notas))
-                    }
-
-                    // cancelar uri
-                    TextButton(
-                        onClick = {
-                            openMult = !openMult
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                    ) {
-                        Text(text = stringResource(id = R.string.btnEliminar))
-                    }
-                }
-            }
         }
     }
+    // tomar foto FIN ------------------------------------------------------------------------------
+
+    // tomar video INICIO --------------------------------------------------------------------------
+    var videoUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+    var listVideoUri by remember {
+        mutableStateOf(listOf<Uri>())
+    }
+    var showVideo by remember {
+        mutableStateOf(false)
+    }
+
+    val videoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CaptureVideo()
+    ) { success ->
+        if (success) {
+            uri.let {
+                listVideoUri = listVideoUri + it // Agrega la Uri a la lista
+                Toast.makeText(context, listVideoUri[listVideoUri.lastIndex].toString(), Toast.LENGTH_LONG).show()
+            }
+            videoUri = uri
+            showVideo = !showVideo
+        }
+    }
+    if(showVideo){
+        DialogShowVideoTake(
+            onDismiss = { showVideo = !showVideo },
+            videoUri = videoUri
+        )
+    }
+    // tomar video FIN -----------------------------------------------------------------------------
+
 
     Dialog(
         onDismissRequest = { /*TODO*/ },
@@ -643,7 +732,7 @@ private fun DialogAddTarea(
                     onClick = { datePicker.show() },
                 ) {
                     Text(
-                        text = "${date.format(DateTimeFormatter.ofPattern("dd-MMM"))}",
+                        text = date.format(DateTimeFormatter.ofPattern("dd-MMM")),
                         style = typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -655,7 +744,7 @@ private fun DialogAddTarea(
                     onClick = { hour = !hour },
                 ) {
                     Text(
-                        text = "${hourSelected.format(DateTimeFormatter.ofPattern("HH:mm"))}",
+                        text = hourSelected.format(DateTimeFormatter.ofPattern("HH:mm")),
                         style = typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -676,14 +765,14 @@ private fun DialogAddTarea(
                     placeholder = {
                         Text(
                             text = stringResource(id = R.string.title_tareas),
-                            style = MaterialTheme.typography.headlineSmall
+                            style = typography.headlineSmall
                         )
                     },
-                    textStyle = MaterialTheme.typography.headlineSmall,
+                    textStyle = typography.headlineSmall,
                     shape = RoundedCornerShape(0.dp),
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                    colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
+                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
                     ),
                     maxLines = 1,
                     keyboardOptions = KeyboardOptions(
@@ -711,9 +800,9 @@ private fun DialogAddTarea(
                     },
                     textStyle = typography.titleMedium,
                     shape = RoundedCornerShape(0.dp),
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                    colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
+                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
                     ),
                     keyboardOptions = KeyboardOptions(
                         imeAction = ImeAction.Done
@@ -753,12 +842,15 @@ private fun DialogAddTarea(
                             Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
                             Text(
                                 text = "Audio",
-                                style = MaterialTheme.typography.bodySmall
+                                style = typography.bodySmall
                             )
                         }
                     }
                     IconButton(
-                        onClick = { /*TODO*/ },
+                        onClick = {
+                            uri = ComposeFileProvider.getImageUri(context)
+                            videoLauncher.launch(uri)
+                        },
                         modifier = Modifier
                             .width(75.dp)
                     ) {
@@ -768,7 +860,7 @@ private fun DialogAddTarea(
                             Icon(imageVector = Icons.Outlined.ThumbUp, contentDescription = null)
                             Text(
                                 text = "Video",
-                                style = MaterialTheme.typography.bodySmall
+                                style = typography.bodySmall
                             )
                         }
                     }
@@ -786,7 +878,7 @@ private fun DialogAddTarea(
                             Icon(imageVector = Icons.Outlined.AccountBox, contentDescription = null)
                             Text(
                                 text = "Foto",
-                                style = MaterialTheme.typography.bodySmall
+                                style = typography.bodySmall
                             )
                         }
                     }
@@ -818,14 +910,27 @@ private fun DialogAddTarea(
                 IconButton(
                     onClick = {
                         if(!update){
+                            // guardar las imagenes tomadas en la galeria
+                            listImageUri.forEachIndexed { _, uri ->
+                                saveImageToStorage(
+                                    uri,
+                                    context,
+                                    "${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
+                                )
+                            }
+
+                            // crear el item para guardar la tarea
                             val item = WorksData(
                                 id = 0,
                                 titlework = title,
                                 descwork = desc,
                                 datework = date,
                                 hour = hourSelected,
-                                images = listUri
+                                images = listImageUri,
+                                videos = listVideoUri
                             )
+
+                            // generar la alarma para la tarea
                             workAlarm(
                                 context = context,
                                 title = item.titlework,
@@ -834,6 +939,7 @@ private fun DialogAddTarea(
                                 time = 10000
                             )
 
+                            // agregar tarea a la base de datos
                             multiViewModel.addWork(item)
                         } else {
                             val item = WorksData(
@@ -842,10 +948,18 @@ private fun DialogAddTarea(
                                 descwork = desc,
                                 datework = date,
                                 hour = hourSelected,
-                                images = listUri
+                                images = listImageUri,
+                                videos = listVideoUri
                             )
                             if(title != tarea.titlework || desc != tarea.descwork || hourSelected != tarea.hour || date != tarea.datework){
                                 multiViewModel.updateWork(item)
+                                workAlarm(
+                                    context = context,
+                                    title = item.titlework,
+                                    longDesc = item.descwork,
+                                    expiration = item.hour,
+                                    time = 10000
+                                )
                             }
                         }
                         onClick()
@@ -862,6 +976,94 @@ private fun DialogAddTarea(
                             style = typography.bodySmall
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DialogShowVideoTake(
+    onDismiss: () -> Unit,
+    videoUri: Uri?
+) {
+    Dialog(
+        onDismissRequest = { onDismiss() },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Card {
+            Column(
+                Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth(0.7f)
+                    .padding(PaddingValues(16.dp))
+            ) {
+                VideoPlayer(
+                    videoUri = videoUri,
+                    modifier = Modifier
+                        .fillMaxHeight(0.5f)
+                        .fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.size(16.dp))
+
+                Button(
+                    onClick = {
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(text = stringResource(id = R.string.btnAceptar))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DialogShowImageTake(
+    onDismiss: () -> Unit,
+    imageUri: Uri
+) {
+    Dialog(
+        onDismissRequest = { onDismiss() },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Card {
+            Column(
+                Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth(0.7f)
+                    .padding(PaddingValues(16.dp))
+            ) {
+                AsyncImage(
+                    model = imageUri,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxHeight(0.5f)
+                        .fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.size(16.dp))
+
+                // guardar uri
+                Button(
+                    onClick = {
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(text = stringResource(id = R.string.btnAceptar))
                 }
             }
         }

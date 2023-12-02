@@ -20,7 +20,6 @@ class Constants {
         const val DATE = "datework"
         const val HOUR = "hour"
         const val IMAGE = "images"
-        // date
-        // hour
+        const val VIDEO = "videos"
     }
 }
