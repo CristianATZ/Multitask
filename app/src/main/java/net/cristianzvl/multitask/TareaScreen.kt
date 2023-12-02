@@ -51,7 +51,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.OutlinedTextField
@@ -84,6 +83,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import net.cristianzvl.multitask.Multimedia.AudioPlayer
 import net.cristianzvl.multitask.Multimedia.ComposeFileProvider
 import net.cristianzvl.multitask.Multimedia.VideoPlayer
 import net.cristianzvl.multitask.Notifications.createChannelNotification
@@ -370,6 +370,10 @@ fun DialogShowMultimedia(
         mutableStateOf(false)
     }
 
+    var showAudio by remember {
+        mutableStateOf(false)
+    }
+
     if(showImage){
         Dialog(
             onDismissRequest = { showImage = !showImage },
@@ -398,6 +402,14 @@ fun DialogShowMultimedia(
                 modifier = Modifier
                     .fillMaxSize(0.6f)
             )
+        }
+    }
+
+    if(showAudio){
+        Dialog(onDismissRequest = { showAudio = !showAudio }) {
+            Card {
+                AudioPlayer(audioUri = uri)
+            }
         }
     }
 
@@ -460,6 +472,35 @@ fun DialogShowMultimedia(
                                     .clickable {
                                         uri = item
                                         showVideo = !showVideo
+                                    },
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) { }
+                            Spacer(modifier = Modifier.size(8.dp))
+                        }
+                    }
+                }
+
+                // audios
+                Text(
+                    text = "Audios",
+                    style = typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    item {
+                        item.audios.forEach { item ->
+                            Column(
+                                Modifier
+                                    .height(100.dp)
+                                    .width(56.dp)
+                                    .background(colorScheme.primary)
+                                    .clickable {
+                                        uri = item
+                                        showAudio = !showAudio
                                     },
                                 verticalArrangement = Arrangement.Center,
                                 horizontalAlignment = Alignment.CenterHorizontally
@@ -535,7 +576,7 @@ private fun DialogAddTarea(
     onClick: () -> Unit,
     multiViewModel: MultitaskViewModel,
     update: Boolean = false,
-    tarea: WorksData = WorksData(0,"","", LocalDate.now(), LocalTime.now(), emptyList(), emptyList())
+    tarea: WorksData = WorksData(0,"","", LocalDate.now(), LocalTime.now(), emptyList(), emptyList(), emptyList())
 ) {
     // variables para en canal de notificacion
     val context = LocalContext.current
@@ -614,7 +655,7 @@ private fun DialogAddTarea(
     }
 
     // funcion para guardar la imagen en la galeria
-    fun saveImageToStorage(uri: Uri, context: Context, displayName: String) {
+    fun saveImageToGallery(uri: Uri, context: Context, displayName: String) {
         // Insertar la imagen en la galería utilizando MediaStore.Images.Media
         val contentResolver = context.contentResolver
         val imageContentValues = ContentValues().apply {
@@ -673,13 +714,39 @@ private fun DialogAddTarea(
         mutableStateOf(false)
     }
 
+    // funcion para guardar los videos en la galeria
+    fun saveVideoToGallery(videoUri: Uri, context: Context, displayName: String) {
+        // Insertar el video en la galería utilizando MediaStore.Video.Media
+        val contentResolver = context.contentResolver
+        val videoContentValues = ContentValues().apply {
+            put(MediaStore.Video.Media.DISPLAY_NAME, displayName)
+            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+        }
+
+        val videoUriResult = contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, videoContentValues)
+
+        // Copiar el contenido del video a la ubicación proporcionada por el contentResolver
+        contentResolver.openOutputStream(videoUriResult!!)?.use { outputStream ->
+            contentResolver.openInputStream(videoUri)?.use { inputStream ->
+                inputStream.copyTo(outputStream)
+            }
+        }
+
+        // Notificar al sistema del nuevo video para que aparezca en la Galería
+        MediaScannerConnection.scanFile(
+            context,
+            arrayOf(videoUriResult.path),
+            arrayOf("video/mp4"),
+            null
+        )
+    }
+
     val videoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CaptureVideo()
     ) { success ->
         if (success) {
             uri.let {
                 listVideoUri = listVideoUri + it // Agrega la Uri a la lista
-                Toast.makeText(context, listVideoUri[listVideoUri.lastIndex].toString(), Toast.LENGTH_LONG).show()
             }
             videoUri = uri
             showVideo = !showVideo
@@ -693,6 +760,37 @@ private fun DialogAddTarea(
     }
     // tomar video FIN -----------------------------------------------------------------------------
 
+
+    // seleccionar archivo INICIO ------------------------------------------------------------------
+    var audioUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+    var listAudioUri by remember {
+        mutableStateOf(listOf<Uri>())
+    }
+    var showAudio by remember {
+        mutableStateOf(false)
+    }
+
+    val audioPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri: Uri? ->
+        uri?.let {
+            // Aquí puedes manejar la URI del archivo seleccionado
+            listAudioUri = listAudioUri + it // Agrega la Uri del archivo a la lista
+            Toast.makeText(context, listAudioUri.last().toString(), Toast.LENGTH_LONG).show()
+        }
+        audioUri = uri
+        showAudio = !showAudio
+    }
+
+    if(showAudio){
+        DialogShowAudioSelected(
+            onDismiss = { showAudio = !showAudio },
+            fileUri = audioUri
+        )
+    }
+    // seleccionar archivo FIN ---------------------------------------------------------------------
 
     Dialog(
         onDismissRequest = { /*TODO*/ },
@@ -771,8 +869,8 @@ private fun DialogAddTarea(
                     textStyle = typography.headlineSmall,
                     shape = RoundedCornerShape(0.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedBorderColor = colorScheme.surfaceVariant,
+                        unfocusedBorderColor = colorScheme.surfaceVariant,
                     ),
                     maxLines = 1,
                     keyboardOptions = KeyboardOptions(
@@ -801,8 +899,8 @@ private fun DialogAddTarea(
                     textStyle = typography.titleMedium,
                     shape = RoundedCornerShape(0.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedBorderColor = colorScheme.surfaceVariant,
+                        unfocusedBorderColor = colorScheme.surfaceVariant,
                     ),
                     keyboardOptions = KeyboardOptions(
                         imeAction = ImeAction.Done
@@ -832,7 +930,9 @@ private fun DialogAddTarea(
                 // archivos
                 if(documentos){
                     IconButton(
-                        onClick = { /*TODO*/ },
+                        onClick = {
+                            audioPickerLauncher.launch("audio/*")
+                        },
                         modifier = Modifier
                             .width(75.dp)
                     ) {
@@ -912,12 +1012,19 @@ private fun DialogAddTarea(
                         if(!update){
                             // guardar las imagenes tomadas en la galeria
                             listImageUri.forEachIndexed { _, uri ->
-                                saveImageToStorage(
+                                saveImageToGallery(
                                     uri,
                                     context,
-                                    "${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
+                                    "image_${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
                                 )
                             }
+                            /*listVideoUri.forEachIndexed { _, uri ->
+                                saveVideoToGallery(
+                                    uri,
+                                    context,
+                                    "video_${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
+                                )
+                            }*/
 
                             // crear el item para guardar la tarea
                             val item = WorksData(
@@ -927,7 +1034,8 @@ private fun DialogAddTarea(
                                 datework = date,
                                 hour = hourSelected,
                                 images = listImageUri,
-                                videos = listVideoUri
+                                videos = listVideoUri,
+                                audios = listAudioUri
                             )
 
                             // generar la alarma para la tarea
@@ -949,7 +1057,8 @@ private fun DialogAddTarea(
                                 datework = date,
                                 hour = hourSelected,
                                 images = listImageUri,
-                                videos = listVideoUri
+                                videos = listVideoUri,
+                                audios = listAudioUri
                             )
                             if(title != tarea.titlework || desc != tarea.descwork || hourSelected != tarea.hour || date != tarea.datework){
                                 multiViewModel.updateWork(item)
@@ -976,6 +1085,47 @@ private fun DialogAddTarea(
                             style = typography.bodySmall
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DialogShowAudioSelected(
+    onDismiss: () -> Unit,
+    fileUri: Uri?
+) {
+    Dialog(
+        onDismissRequest = { onDismiss() },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Card {
+            Column(
+                Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth(0.7f)
+                    .padding(PaddingValues(16.dp))
+            ) {
+                //Text(text = "Documento PDF cargado con exito.")
+                AudioPlayer(
+                    audioUri = fileUri
+                )
+
+                Spacer(modifier = Modifier.size(16.dp))
+
+                Button(
+                    onClick = {
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(text = stringResource(id = R.string.btnAceptar))
                 }
             }
         }

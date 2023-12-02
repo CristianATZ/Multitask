@@ -21,5 +21,6 @@ class Constants {
         const val HOUR = "hour"
         const val IMAGE = "images"
         const val VIDEO = "videos"
+        const val AUDIO = "audios"
     }
 }

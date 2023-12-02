@@ -26,5 +26,6 @@ data class WorksData(
     @ColumnInfo(name = Constants.WorksTable.DATE) val datework: LocalDate,
     @ColumnInfo(name = Constants.WorksTable.HOUR) val hour: LocalTime,
     @ColumnInfo(name = Constants.WorksTable.IMAGE) val images: List<Uri>,
-    @ColumnInfo(name = Constants.WorksTable.VIDEO) val videos: List<Uri>
+    @ColumnInfo(name = Constants.WorksTable.VIDEO) val videos: List<Uri>,
+    @ColumnInfo(name = Constants.WorksTable.AUDIO) val audios: List<Uri>
 )
