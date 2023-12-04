@@ -26,8 +26,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBox
 import androidx.compose.material.icons.outlined.Add
@@ -147,7 +149,7 @@ fun NotaScreen(
                 }
 
                 // boton para agregar notas
-                FABody(multiViewModel)
+                FABody(multiViewModel,navigationType)
             }
         }
 
@@ -208,8 +210,9 @@ fun NotaBody(
         DialogAddNote(
             onClick = { openDialog = !openDialog },
             multiViewModel = multiViewModel,
+            update = true,
             nota = item,
-            update = true
+            navigationType = navigationType
         )
     }
 
@@ -227,7 +230,8 @@ fun NotaBody(
     if(showMultimedia){
         DialogShowMultimediaNote(
             onDismiss = { showMultimedia = !showMultimedia },
-            item = item
+            item = item,
+            navigationType = navigationType
         )
     }
 
@@ -311,7 +315,8 @@ fun NotaBody(
 @Composable
 fun DialogShowMultimediaNote(
     onDismiss: () -> Unit,
-    item: NotesData
+    item: NotesData,
+    navigationType: MultiNavigationType
 ) {
     val context = LocalContext.current
     var uri: Uri by remember { mutableStateOf(Uri.EMPTY) }
@@ -366,6 +371,19 @@ fun DialogShowMultimediaNote(
         }
     }
 
+    val modifier =
+        if(navigationType == MultiNavigationType.BOTTOM_NAVIGATION){
+            Modifier
+                .padding(PaddingValues(16.dp))
+                .fillMaxWidth(0.8f)
+        } else {
+            Modifier
+                .padding(PaddingValues(16.dp))
+                .fillMaxWidth(0.6f)
+                .fillMaxHeight(0.8f)
+                .verticalScroll(rememberScrollState())
+        }
+
     Dialog(
         onDismissRequest = { onDismiss() },
         properties = DialogProperties(
@@ -374,9 +392,7 @@ fun DialogShowMultimediaNote(
     ) {
         Card {
             Column(
-                Modifier
-                    .padding(PaddingValues(16.dp))
-                    .fillMaxWidth(0.8f)
+                modifier = modifier
             ) {
                 // imagenes
                 Text(
@@ -565,7 +581,8 @@ fun DialogDeleteNote(
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun FABody(
-    multiViewModel: MultitaskViewModel
+    multiViewModel: MultitaskViewModel,
+    navigationType: MultiNavigationType
 ) {
     var dialog by remember {
         mutableStateOf(false)
@@ -574,6 +591,7 @@ private fun FABody(
     if(dialog){
         DialogAddNote(
             multiViewModel = multiViewModel,
+            navigationType = navigationType,
             onClick = {
                 dialog = !dialog
             }
@@ -608,7 +626,12 @@ fun DialogAddNote(
     onClick: () -> Unit,
     multiViewModel: MultitaskViewModel,
     update: Boolean = false,
-    nota: NotesData = NotesData(0,"","", LocalDate.now(), emptyList(), emptyList(), emptyList(), emptyList())
+    nota: NotesData = NotesData(
+        0, "", "", LocalDate.now(),
+        emptyList(), emptyList(), emptyList(),
+        emptyList()
+    ),
+    navigationType: MultiNavigationType = MultiNavigationType.BOTTOM_NAVIGATION
 ) {
     // variables para en canal de notificacion
     val context = LocalContext.current
@@ -765,259 +788,525 @@ fun DialogAddNote(
                 .fillMaxSize()
         ) {
 
-            Spacer(modifier = Modifier.size(8.dp))
+            if(navigationType == MultiNavigationType.BOTTOM_NAVIGATION){
+                Spacer(modifier = Modifier.size(8.dp))
 
-            // icono para cerrar el dialog
-            Row(
-                modifier = Modifier
-                    .padding(PaddingValues(8.dp)),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = {
-                        onClick()
-                    }
+                // icono para cerrar el dialog
+                Row(
+                    modifier = Modifier
+                        .padding(PaddingValues(8.dp)),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Clear,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(50.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Text(
-                    text = LocalDateTime.now().dayOfMonth.toString() + " " + LocalDateTime.now().month.toString(),
-                    style = typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.size(16.dp))
-            }
-
-            // caja de texto titlo de la nota
-            Row(
-                modifier = Modifier
-                    .padding(PaddingValues(16.dp))
-            ) {
-
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    placeholder = {
-                        Text(
-                            text = stringResource(id = R.string.title_notas),
-                            style = typography.headlineSmall
-                        )
-                    },
-                    textStyle = typography.headlineSmall,
-                    shape = RoundedCornerShape(0.dp),
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
-                        focusedBorderColor = colorScheme.surfaceVariant,
-                        unfocusedBorderColor = colorScheme.surfaceVariant
-                    ),
-                    maxLines = 1,
-                    keyboardOptions = KeyboardOptions(
-                        imeAction = ImeAction.Next
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                )
-            }
-
-            // caja de texto de la descripcion de la nota
-
-            Column(
-                modifier = Modifier
-                    .padding(PaddingValues(16.dp))
-            ) {
-                OutlinedTextField(
-                    value = desc,
-                    onValueChange = { desc = it },
-                    placeholder = {
-                        Text(
-                            text = stringResource(id = R.string.desc_notas),
-                            style = typography.titleMedium
-                        )
-                    },
-                    textStyle = typography.titleMedium,
-                    shape = RoundedCornerShape(0.dp),
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
-                        focusedBorderColor = colorScheme.surfaceVariant,
-                        unfocusedBorderColor = colorScheme.surfaceVariant
-                    ),
-                    keyboardOptions = KeyboardOptions(
-                        imeAction = ImeAction.Done
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(0.9f)
-                )
-            }
-
-            // boton agregar nota
-            // boton agregar voz, video y audio
-            var documentos by remember {
-                mutableStateOf(false)
-            }
-
-            Row(
-                modifier = Modifier
-                    .padding(
-                        vertical = 0.dp,
-                        horizontal = 16.dp
-                    )
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
-            ) {
-
-                // opciones de documentos
-                if(documentos){
-                    // documentos
                     IconButton(
                         onClick = {
-                            filePickerLauncher.launch("application/pdf")
-                        },
-                        modifier = Modifier
-                            .width(75.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
-                            Text(
-                                text = "PDF",
-                                style = typography.bodySmall
-                            )
+                            onClick()
                         }
-                    }
-
-                    IconButton(
-                        onClick = {
-                            audioPickerLauncher.launch("audio/*")
-                        },
-                        modifier = Modifier
-                            .width(75.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
-                            Text(
-                                text = "Audio",
-                                style = typography.bodySmall
-                            )
-                        }
-                    }
-
-                    IconButton(
-                        onClick = {
-                            uri = ComposeFileProvider.getImageUri(context)
-                            videoLauncher.launch(uri)
-                        },
-                        modifier = Modifier
-                            .width(75.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(imageVector = Icons.Outlined.ThumbUp, contentDescription = null)
-                            Text(
-                                text = "Video",
-                                style = typography.bodySmall
-                            )
-                        }
-                    }
-
-                    IconButton(
-                        onClick = {
-                            uri = ComposeFileProvider.getImageUri(context)
-                            cameraLauncher.launch(uri)
-                        },
-                        modifier = Modifier
-                            .width(75.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(imageVector = Icons.Outlined.AccountBox, contentDescription = null)
-                            Text(
-                                text = "Foto",
-                                style = typography.bodySmall
-                            )
-                        }
-                    }
-                }
-
-                // abrir archivos
-                IconButton(
-                    onClick = { documentos = !documentos },
-                    modifier = Modifier
-                        .width(75.dp)
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.MoreVert,
-                            contentDescription = null
-                        )
-                        Text(
-                            text = "Galeria",
-                            style = typography.bodySmall
+                            imageVector = Icons.Outlined.Clear,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(50.dp)
                         )
                     }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    Text(
+                        text = LocalDateTime.now().dayOfMonth.toString() + " " + LocalDateTime.now().month.toString(),
+                        style = typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.size(16.dp))
                 }
 
-                Spacer(modifier = Modifier.size(16.dp))
+                // caja de texto titlo de la nota
+                Row(
+                    modifier = Modifier
+                        .padding(PaddingValues(16.dp))
+                ) {
 
-                // agregar nota
-                if(!documentos){
-                    IconButton(
-                        onClick = {
-                            if(!update){
-                                val item = NotesData(
-                                    id = 0,
-                                    titlenote = title,
-                                    descnote = desc,
-                                    datenote = LocalDate.now(),
-                                    images = listImageUri,
-                                    videos = listVideoUri,
-                                    audios = listAudioUri,
-                                    files = listFileUri
-                                )
-                                multiViewModel.addNote(item)
-                            } else {
-                                val item = NotesData(
-                                    id = nota.id,
-                                    titlenote = title,
-                                    descnote = desc,
-                                    datenote = LocalDate.now(),
-                                    images = listImageUri,
-                                    videos = listVideoUri,
-                                    audios = listAudioUri,
-                                    files = listFileUri
-                                )
-                                if(title != nota.titlenote || desc != nota.descnote){
-                                    multiViewModel.updateNote(item)
-                                }
-                            }
-                            onClick()
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(id = R.string.title_notas),
+                                style = typography.headlineSmall
+                            )
                         },
+                        textStyle = typography.headlineSmall,
+                        shape = RoundedCornerShape(0.dp),
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = colorScheme.surfaceVariant,
+                            unfocusedBorderColor = colorScheme.surfaceVariant
+                        ),
+                        maxLines = 1,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    )
+                }
+
+                // caja de texto de la descripcion de la nota
+
+                Column(
+                    modifier = Modifier
+                        .padding(PaddingValues(16.dp))
+                ) {
+                    OutlinedTextField(
+                        value = desc,
+                        onValueChange = { desc = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(id = R.string.desc_notas),
+                                style = typography.titleMedium
+                            )
+                        },
+                        textStyle = typography.titleMedium,
+                        shape = RoundedCornerShape(0.dp),
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = colorScheme.surfaceVariant,
+                            unfocusedBorderColor = colorScheme.surfaceVariant
+                        ),
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Done
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                    )
+                }
+
+                // boton agregar nota
+                // boton agregar voz, video y audio
+                var documentos by remember {
+                    mutableStateOf(false)
+                }
+
+                Row(
+                    modifier = Modifier
+                        .padding(
+                            vertical = 0.dp,
+                            horizontal = 16.dp
+                        )
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End
+                ) {
+
+                    // opciones de documentos
+                    if(documentos){
+                        // documentos
+                        IconButton(
+                            onClick = {
+                                filePickerLauncher.launch("application/pdf")
+                            },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
+                                Text(
+                                    text = "PDF",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = {
+                                audioPickerLauncher.launch("audio/*")
+                            },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
+                                Text(
+                                    text = "Audio",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = {
+                                uri = ComposeFileProvider.getImageUri(context)
+                                videoLauncher.launch(uri)
+                            },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(imageVector = Icons.Outlined.ThumbUp, contentDescription = null)
+                                Text(
+                                    text = "Video",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = {
+                                uri = ComposeFileProvider.getImageUri(context)
+                                cameraLauncher.launch(uri)
+                            },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(imageVector = Icons.Outlined.AccountBox, contentDescription = null)
+                                Text(
+                                    text = "Foto",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+
+                    // abrir archivos
+                    IconButton(
+                        onClick = { documentos = !documentos },
                         modifier = Modifier
                             .width(75.dp)
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
+                            Icon(
+                                imageVector = Icons.Outlined.MoreVert,
+                                contentDescription = null
+                            )
                             Text(
-                                text = "Guardar",
+                                text = "Galeria",
                                 style = typography.bodySmall
                             )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.size(16.dp))
+
+                    // agregar nota
+                    if(!documentos){
+                        IconButton(
+                            onClick = {
+                                if(!update){
+                                    val item = NotesData(
+                                        id = 0,
+                                        titlenote = title,
+                                        descnote = desc,
+                                        datenote = LocalDate.now(),
+                                        images = listImageUri,
+                                        videos = listVideoUri,
+                                        audios = listAudioUri,
+                                        files = listFileUri
+                                    )
+                                    multiViewModel.addNote(item)
+                                } else {
+                                    val item = NotesData(
+                                        id = nota.id,
+                                        titlenote = title,
+                                        descnote = desc,
+                                        datenote = LocalDate.now(),
+                                        images = listImageUri,
+                                        videos = listVideoUri,
+                                        audios = listAudioUri,
+                                        files = listFileUri
+                                    )
+                                    if(title != nota.titlenote || desc != nota.descnote){
+                                        multiViewModel.updateNote(item)
+                                    }
+                                }
+                                onClick()
+                            },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
+                                Text(
+                                    text = "Guardar",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            else {
+                Spacer(modifier = Modifier.size(8.dp))
+                Row {
+                    // icono para cerrar el dialog
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth(0.85f)
+                    ) {
+                        // cerrar y fecha
+                        Row(
+                            modifier = Modifier
+                                .padding(PaddingValues(8.dp)),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    onClick()
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Clear,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(50.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            Text(
+                                text = LocalDateTime.now().dayOfMonth.toString() + " " + LocalDateTime.now().month.toString(),
+                                style = typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(modifier = Modifier.size(16.dp))
+                        }
+
+                        // caja de texto titlo de la nota
+                        Row(
+                            modifier = Modifier
+                                .padding(PaddingValues(16.dp))
+                        ) {
+
+                            OutlinedTextField(
+                                value = title,
+                                onValueChange = { title = it },
+                                placeholder = {
+                                    Text(
+                                        text = stringResource(id = R.string.title_notas),
+                                        style = typography.headlineSmall
+                                    )
+                                },
+                                textStyle = typography.headlineSmall,
+                                shape = RoundedCornerShape(0.dp),
+                                colors = TextFieldDefaults.outlinedTextFieldColors(
+                                    focusedBorderColor = colorScheme.surfaceVariant,
+                                    unfocusedBorderColor = colorScheme.surfaceVariant
+                                ),
+                                maxLines = 1,
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Next
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                            )
+                        }
+
+                        // caja de texto de la descripcion de la nota
+
+                        Column(
+                            modifier = Modifier
+                                .padding(PaddingValues(16.dp))
+                        ) {
+                            OutlinedTextField(
+                                value = desc,
+                                onValueChange = { desc = it },
+                                placeholder = {
+                                    Text(
+                                        text = stringResource(id = R.string.desc_notas),
+                                        style = typography.titleMedium
+                                    )
+                                },
+                                textStyle = typography.titleMedium,
+                                shape = RoundedCornerShape(0.dp),
+                                colors = TextFieldDefaults.outlinedTextFieldColors(
+                                    focusedBorderColor = colorScheme.surfaceVariant,
+                                    unfocusedBorderColor = colorScheme.surfaceVariant
+                                ),
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Done
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.9f)
+                            )
+                        }
+                    }
+
+                    // boton agregar nota
+                    // boton agregar voz, video y audio
+                    var documentos by remember {
+                        mutableStateOf(false)
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .padding(
+                                vertical = 0.dp,
+                                horizontal = 16.dp
+                            )
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.Top,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+
+                        // agregar nota
+                        IconButton(
+                            onClick = {
+                                if(!update){
+                                    val item = NotesData(
+                                        id = 0,
+                                        titlenote = title,
+                                        descnote = desc,
+                                        datenote = LocalDate.now(),
+                                        images = listImageUri,
+                                        videos = listVideoUri,
+                                        audios = listAudioUri,
+                                        files = listFileUri
+                                    )
+                                    multiViewModel.addNote(item)
+                                } else {
+                                    val item = NotesData(
+                                        id = nota.id,
+                                        titlenote = title,
+                                        descnote = desc,
+                                        datenote = LocalDate.now(),
+                                        images = listImageUri,
+                                        videos = listVideoUri,
+                                        audios = listAudioUri,
+                                        files = listFileUri
+                                    )
+                                    if(title != nota.titlenote || desc != nota.descnote){
+                                        multiViewModel.updateNote(item)
+                                    }
+                                }
+                                onClick()
+                            },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
+                                Text(
+                                    text = "Guardar",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.size(16.dp))
+
+                        // abrir archivos
+                        IconButton(
+                            onClick = { documentos = !documentos },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.MoreVert,
+                                    contentDescription = null
+                                )
+                                Text(
+                                    text = "Galeria",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+
+                        // opciones de documentos
+                        if(documentos){
+                            // documentos
+                            IconButton(
+                                onClick = {
+                                    filePickerLauncher.launch("application/pdf")
+                                },
+                                modifier = Modifier
+                                    .width(75.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
+                                    Text(
+                                        text = "PDF",
+                                        style = typography.bodySmall
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    audioPickerLauncher.launch("audio/*")
+                                },
+                                modifier = Modifier
+                                    .width(75.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
+                                    Text(
+                                        text = "Audio",
+                                        style = typography.bodySmall
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    uri = ComposeFileProvider.getImageUri(context)
+                                    videoLauncher.launch(uri)
+                                },
+                                modifier = Modifier
+                                    .width(75.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(imageVector = Icons.Outlined.ThumbUp, contentDescription = null)
+                                    Text(
+                                        text = "Video",
+                                        style = typography.bodySmall
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    uri = ComposeFileProvider.getImageUri(context)
+                                    cameraLauncher.launch(uri)
+                                },
+                                modifier = Modifier
+                                    .width(75.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(imageVector = Icons.Outlined.AccountBox, contentDescription = null)
+                                    Text(
+                                        text = "Foto",
+                                        style = typography.bodySmall
+                                    )
+                                }
+                            }
                         }
                     }
                 }

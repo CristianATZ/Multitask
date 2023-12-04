@@ -28,8 +28,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBox
 import androidx.compose.material.icons.outlined.Add
@@ -179,14 +181,15 @@ fun TareaScreen(multiViewModel: MultitaskViewModel, navigationType: MultiNavigat
                     }
                 }
 
-                FABody(multiViewModel)
+                FABody(multiViewModel,navigationType)
             }
         }
 
         if(navigationType == MultiNavigationType.NAVIGATION_RAIL){
             MultiDetailsScreenWorks(
                 preview,
-                multiViewModel
+                multiViewModel,
+                navigationType
             ) { item ->
                 preview = item
             }
@@ -207,7 +210,8 @@ private fun TopBar() {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun FABody(
-    multiViewModel: MultitaskViewModel
+    multiViewModel: MultitaskViewModel,
+    navigationType: MultiNavigationType
 ) {
     var tarea by remember {
         mutableStateOf(false)
@@ -215,10 +219,11 @@ private fun FABody(
 
     if(tarea){
         DialogAddWork(
-            multiViewModel = multiViewModel,
             onClick = {
                 tarea = !tarea
-            }
+            },
+            multiViewModel = multiViewModel,
+            navigationType = navigationType
         )
     }
 
@@ -277,7 +282,8 @@ private fun TareaBody(
             onClick = { openDialog = !openDialog },
             multiViewModel = multiViewModel,
             update = true,
-            tarea = item
+            tarea = item,
+            navigationType = navigationType
         )
     }
 
@@ -295,7 +301,8 @@ private fun TareaBody(
     if(showMultimedia){
         DialogShowMultimediaWork(
             onDismiss = { showMultimedia = !showMultimedia },
-            item = item
+            item = item,
+            navigationType = navigationType
         )
     }
 
@@ -383,7 +390,8 @@ private fun TareaBody(
 @Composable
 fun DialogShowMultimediaWork(
     onDismiss: () -> Unit,
-    item: WorksData
+    item: WorksData,
+    navigationType: MultiNavigationType
 ) {
     val context = LocalContext.current
     var uri: Uri by remember { mutableStateOf(Uri.EMPTY) }
@@ -438,6 +446,19 @@ fun DialogShowMultimediaWork(
         }
     }
 
+    val modifier =
+        if(navigationType == MultiNavigationType.BOTTOM_NAVIGATION){
+            Modifier
+                .padding(PaddingValues(16.dp))
+                .fillMaxWidth(0.8f)
+        } else {
+            Modifier
+                .padding(PaddingValues(16.dp))
+                .fillMaxWidth(0.6f)
+                .fillMaxHeight(0.8f)
+                .verticalScroll(rememberScrollState())
+        }
+
     Dialog(
         onDismissRequest = { onDismiss() },
         properties = DialogProperties(
@@ -446,9 +467,7 @@ fun DialogShowMultimediaWork(
     ) {
         Card {
             Column(
-                Modifier
-                    .padding(PaddingValues(16.dp))
-                    .fillMaxWidth(0.8f)
+                modifier = modifier
             ) {
                 // imagenes
                 Text(
@@ -555,8 +574,12 @@ fun DialogShowMultimediaWork(
                                     .clickable {
                                         uri = item
                                         val intent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(uri, "application/pdf") // Cambia el tipo de MIME según el tipo de documento que estás mostrando
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                            setDataAndType(
+                                                uri,
+                                                "application/pdf"
+                                            ) // Cambia el tipo de MIME según el tipo de documento que estás mostrando
+                                            flags =
+                                                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                                         }
                                         context.startActivity(intent)
                                     },
@@ -636,7 +659,12 @@ fun DialogAddWork(
     onClick: () -> Unit,
     multiViewModel: MultitaskViewModel,
     update: Boolean = false,
-    tarea: WorksData = WorksData(0,"","", LocalDate.now(), LocalTime.now(), emptyList(), emptyList(), emptyList(), emptyList())
+    tarea: WorksData = WorksData(
+        0, "", "", LocalDate.now(), LocalTime.now(), emptyList(), emptyList(),
+        emptyList(),
+        emptyList()
+    ),
+    navigationType: MultiNavigationType
 ) {
 
     // variables para en canal de notificacion
@@ -838,312 +866,628 @@ fun DialogAddWork(
                 .fillMaxSize()
         ) {
 
-            Spacer(modifier = Modifier.size(8.dp))
+            if(navigationType == MultiNavigationType.BOTTOM_NAVIGATION){
+                Spacer(modifier = Modifier.size(8.dp))
 
-            // icono para cerrar el dialog
-            Row(
-                modifier = Modifier
-                    .padding(PaddingValues(8.dp)),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = {
-                        onClick()
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Clear,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(50.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                TextButton(
-                    onClick = { datePicker.show() },
-                ) {
-                    Text(
-                        text = date.format(DateTimeFormatter.ofPattern("dd-MMM")),
-                        style = typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.size(16.dp))
-
-                TextButton(
-                    onClick = { hour = !hour },
-                ) {
-                    Text(
-                        text = hourSelected.format(DateTimeFormatter.ofPattern("HH:mm")),
-                        style = typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.size(16.dp))
-            }
-
-            // caja de texto titlo de la nota
-            Row(
-                modifier = Modifier
-                    .padding(PaddingValues(16.dp))
-            ) {
-
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    placeholder = {
-                        Text(
-                            text = stringResource(id = R.string.title_tareas),
-                            style = typography.headlineSmall
-                        )
-                    },
-                    textStyle = typography.headlineSmall,
-                    shape = RoundedCornerShape(0.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colorScheme.surfaceVariant,
-                        unfocusedBorderColor = colorScheme.surfaceVariant,
-                    ),
-                    maxLines = 1,
-                    keyboardOptions = KeyboardOptions(
-                        imeAction = ImeAction.Next
-                    ),
+                // icono para cerrar el dialog
+                Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                )
-            }
-
-            // caja de texto de la descripcion de la nota
-
-            Column(
-                modifier = Modifier
-                    .padding(PaddingValues(16.dp))
-            ) {
-                OutlinedTextField(
-                    value = desc,
-                    onValueChange = { desc = it },
-                    placeholder = {
-                        Text(
-                            text = stringResource(id = R.string.title_tareas),
-                            style = typography.titleMedium
-                        )
-                    },
-                    textStyle = typography.titleMedium,
-                    shape = RoundedCornerShape(0.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colorScheme.surfaceVariant,
-                        unfocusedBorderColor = colorScheme.surfaceVariant,
-                    ),
-                    keyboardOptions = KeyboardOptions(
-                        imeAction = ImeAction.Done
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(0.9f)
-                )
-            }
-
-            // boton agregar nota
-            // boton agregar voz, video y audio
-            var documentos by remember {
-                mutableStateOf(false)
-            }
-
-            Row(
-                modifier = Modifier
-                    .padding(
-                        vertical = 0.dp,
-                        horizontal = 16.dp
-                    )
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
-            ) {
-                // archivos
-                if(documentos){
-
-                    // documentos
-                    IconButton(
-                        onClick = {
-                            filePickerLauncher.launch("application/pdf")
-                        },
-                        modifier = Modifier
-                            .width(75.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
-                            Text(
-                                text = "PDF",
-                                style = typography.bodySmall
-                            )
-                        }
-                    }
-
-                    IconButton(
-                        onClick = {
-                            audioPickerLauncher.launch("audio/*")
-                        },
-                        modifier = Modifier
-                            .width(75.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
-                            Text(
-                                text = "Audio",
-                                style = typography.bodySmall
-                            )
-                        }
-                    }
-
-                    IconButton(
-                        onClick = {
-                            uri = ComposeFileProvider.getImageUri(context)
-                            videoLauncher.launch(uri)
-                        },
-                        modifier = Modifier
-                            .width(75.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(imageVector = Icons.Outlined.ThumbUp, contentDescription = null)
-                            Text(
-                                text = "Video",
-                                style = typography.bodySmall
-                            )
-                        }
-                    }
-
-                    IconButton(
-                        onClick = {
-                            uri = ComposeFileProvider.getImageUri(context)
-                            cameraLauncher.launch(uri)
-                        },
-                        modifier = Modifier
-                            .width(75.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(imageVector = Icons.Outlined.AccountBox, contentDescription = null)
-                            Text(
-                                text = "Foto",
-                                style = typography.bodySmall
-                            )
-                        }
-                    }
-                }
-
-                // abrir archivos
-                IconButton(
-                    onClick = { documentos = !documentos },
-                    modifier = Modifier
-                        .width(75.dp)
+                        .padding(PaddingValues(8.dp)),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    IconButton(
+                        onClick = {
+                            onClick()
+                        }
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.MoreVert,
-                            contentDescription = null
-                        )
-                        Text(
-                            text = "Galeria",
-                            style = typography.bodySmall
+                            imageVector = Icons.Outlined.Clear,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(50.dp)
                         )
                     }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    TextButton(
+                        onClick = { datePicker.show() },
+                    ) {
+                        Text(
+                            text = date.format(DateTimeFormatter.ofPattern("dd-MMM")),
+                            style = typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.size(16.dp))
+
+                    TextButton(
+                        onClick = { hour = !hour },
+                    ) {
+                        Text(
+                            text = hourSelected.format(DateTimeFormatter.ofPattern("HH:mm")),
+                            style = typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.size(16.dp))
                 }
 
-                Spacer(modifier = Modifier.size(16.dp))
+                // caja de texto titlo de la nota
+                Row(
+                    modifier = Modifier
+                        .padding(PaddingValues(16.dp))
+                ) {
 
-                // guardar tarea
-                if(!documentos){
-                    IconButton(
-                        onClick = {
-                            if(!update){
-                                // guardar las imagenes tomadas en la galeria
-                                listImageUri.forEachIndexed { _, uri ->
-                                    saveImageToGallery(
-                                        uri,
-                                        context,
-                                        "image_${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
-                                    )
-                                }
-                                listVideoUri.forEachIndexed { _, uri ->
-                                    saveVideoToGallery(
-                                        uri,
-                                        context,
-                                        "video_${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
-                                    )
-                                }
-
-                                // crear el item para guardar la tarea
-                                val item = WorksData(
-                                    id = 0,
-                                    titlework = title,
-                                    descwork = desc,
-                                    datework = date,
-                                    hour = hourSelected,
-                                    images = listImageUri,
-                                    videos = listVideoUri,
-                                    audios = listAudioUri,
-                                    files = listFileUri
-                                )
-
-                                // generar la alarma para la tarea en 5 segundos
-                                /*workAlarm(
-                                    context = context,
-                                    title = item.titlework,
-                                    longDesc = item.descwork,
-                                    expiration = item.hour,
-                                    time = 5000
-                                )*/
-
-                                // generar alarma para 5 minutos antes de que caduque la tarea
-                                workAlarm(
-                                    context = context,
-                                    item = item,
-                                    expiration = item.hour
-                                )
-
-                                // agregar tarea a la base de datos
-                                multiViewModel.addWork(item)
-                            } else {
-                                val item = WorksData(
-                                    id = tarea.id,
-                                    titlework = title,
-                                    descwork = desc,
-                                    datework = date,
-                                    hour = hourSelected,
-                                    images = listImageUri,
-                                    videos = listVideoUri,
-                                    audios = listAudioUri,
-                                    files = listFileUri
-                                )
-                                if(title != tarea.titlework || desc != tarea.descwork || hourSelected != tarea.hour || date != tarea.datework){
-                                    multiViewModel.updateWork(item)
-                                }
-                            }
-                            onClick()
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(id = R.string.title_tareas),
+                                style = typography.headlineSmall
+                            )
                         },
+                        textStyle = typography.headlineSmall,
+                        shape = RoundedCornerShape(0.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colorScheme.surfaceVariant,
+                            unfocusedBorderColor = colorScheme.surfaceVariant,
+                        ),
+                        maxLines = 1,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    )
+                }
+
+                // caja de texto de la descripcion de la nota
+
+                Column(
+                    modifier = Modifier
+                        .padding(PaddingValues(16.dp))
+                ) {
+                    OutlinedTextField(
+                        value = desc,
+                        onValueChange = { desc = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(id = R.string.title_tareas),
+                                style = typography.titleMedium
+                            )
+                        },
+                        textStyle = typography.titleMedium,
+                        shape = RoundedCornerShape(0.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colorScheme.surfaceVariant,
+                            unfocusedBorderColor = colorScheme.surfaceVariant,
+                        ),
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Done
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                    )
+                }
+
+                // boton agregar nota
+                // boton agregar voz, video y audio
+                var documentos by remember {
+                    mutableStateOf(false)
+                }
+
+                Row(
+                    modifier = Modifier
+                        .padding(
+                            vertical = 0.dp,
+                            horizontal = 16.dp
+                        )
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    // archivos
+                    if(documentos){
+
+                        // documentos
+                        IconButton(
+                            onClick = {
+                                filePickerLauncher.launch("application/pdf")
+                            },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
+                                Text(
+                                    text = "PDF",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = {
+                                audioPickerLauncher.launch("audio/*")
+                            },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
+                                Text(
+                                    text = "Audio",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = {
+                                uri = ComposeFileProvider.getImageUri(context)
+                                videoLauncher.launch(uri)
+                            },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(imageVector = Icons.Outlined.ThumbUp, contentDescription = null)
+                                Text(
+                                    text = "Video",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = {
+                                uri = ComposeFileProvider.getImageUri(context)
+                                cameraLauncher.launch(uri)
+                            },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(imageVector = Icons.Outlined.AccountBox, contentDescription = null)
+                                Text(
+                                    text = "Foto",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+
+                    // abrir archivos
+                    IconButton(
+                        onClick = { documentos = !documentos },
                         modifier = Modifier
                             .width(75.dp)
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
+                            Icon(
+                                imageVector = Icons.Outlined.MoreVert,
+                                contentDescription = null
+                            )
                             Text(
-                                text = "Guardar",
+                                text = "Galeria",
                                 style = typography.bodySmall
                             )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.size(16.dp))
+
+                    // guardar tarea
+                    if(!documentos){
+                        IconButton(
+                            onClick = {
+                                if(!update){
+                                    // guardar las imagenes tomadas en la galeria
+                                    listImageUri.forEachIndexed { _, uri ->
+                                        saveImageToGallery(
+                                            uri,
+                                            context,
+                                            "image_${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
+                                        )
+                                    }
+                                    listVideoUri.forEachIndexed { _, uri ->
+                                        saveVideoToGallery(
+                                            uri,
+                                            context,
+                                            "video_${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
+                                        )
+                                    }
+
+                                    // crear el item para guardar la tarea
+                                    val item = WorksData(
+                                        id = 0,
+                                        titlework = title,
+                                        descwork = desc,
+                                        datework = date,
+                                        hour = hourSelected,
+                                        images = listImageUri,
+                                        videos = listVideoUri,
+                                        audios = listAudioUri,
+                                        files = listFileUri
+                                    )
+
+                                    // generar la alarma para la tarea en 5 segundos
+                                    /*workAlarm(
+                                        context = context,
+                                        title = item.titlework,
+                                        longDesc = item.descwork,
+                                        expiration = item.hour,
+                                        time = 5000
+                                    )*/
+
+                                    // generar alarma para 5 minutos antes de que caduque la tarea
+                                    workAlarm(
+                                        context = context,
+                                        item = item,
+                                        expiration = item.hour
+                                    )
+
+                                    // agregar tarea a la base de datos
+                                    multiViewModel.addWork(item)
+                                } else {
+                                    val item = WorksData(
+                                        id = tarea.id,
+                                        titlework = title,
+                                        descwork = desc,
+                                        datework = date,
+                                        hour = hourSelected,
+                                        images = listImageUri,
+                                        videos = listVideoUri,
+                                        audios = listAudioUri,
+                                        files = listFileUri
+                                    )
+                                    if(title != tarea.titlework || desc != tarea.descwork || hourSelected != tarea.hour || date != tarea.datework){
+                                        multiViewModel.updateWork(item)
+                                    }
+                                }
+                                onClick()
+                            },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
+                                Text(
+                                    text = "Guardar",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            else {
+                Row {
+                    Spacer(modifier = Modifier.size(8.dp))
+
+                    // icono para cerrar el dialog
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth(0.85f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(PaddingValues(8.dp)),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    onClick()
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Clear,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(50.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            TextButton(
+                                onClick = { datePicker.show() },
+                            ) {
+                                Text(
+                                    text = date.format(DateTimeFormatter.ofPattern("dd-MMM")),
+                                    style = typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.size(16.dp))
+
+                            TextButton(
+                                onClick = { hour = !hour },
+                            ) {
+                                Text(
+                                    text = hourSelected.format(DateTimeFormatter.ofPattern("HH:mm")),
+                                    style = typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.size(16.dp))
+                        }
+
+                        // caja de texto titlo de la nota
+                        Row(
+                            modifier = Modifier
+                                .padding(PaddingValues(16.dp))
+                        ) {
+
+                            OutlinedTextField(
+                                value = title,
+                                onValueChange = { title = it },
+                                placeholder = {
+                                    Text(
+                                        text = stringResource(id = R.string.title_tareas),
+                                        style = typography.headlineSmall
+                                    )
+                                },
+                                textStyle = typography.headlineSmall,
+                                shape = RoundedCornerShape(0.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = colorScheme.surfaceVariant,
+                                    unfocusedBorderColor = colorScheme.surfaceVariant,
+                                ),
+                                maxLines = 1,
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Next
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                            )
+                        }
+
+                        // caja de texto de la descripcion de la nota
+
+                        Column(
+                            modifier = Modifier
+                                .padding(PaddingValues(16.dp))
+                        ) {
+                            OutlinedTextField(
+                                value = desc,
+                                onValueChange = { desc = it },
+                                placeholder = {
+                                    Text(
+                                        text = stringResource(id = R.string.title_tareas),
+                                        style = typography.titleMedium
+                                    )
+                                },
+                                textStyle = typography.titleMedium,
+                                shape = RoundedCornerShape(0.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = colorScheme.surfaceVariant,
+                                    unfocusedBorderColor = colorScheme.surfaceVariant,
+                                ),
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Done
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.9f)
+                            )
+                        }
+                    }
+
+                    // boton agregar nota
+                    // boton agregar voz, video y audio
+                    var documentos by remember {
+                        mutableStateOf(false)
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.Top,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Spacer(modifier = Modifier.size(16.dp))
+
+                        IconButton(
+                            onClick = {
+                                if(!update){
+                                    // guardar las imagenes tomadas en la galeria
+                                    listImageUri.forEachIndexed { _, uri ->
+                                        saveImageToGallery(
+                                            uri,
+                                            context,
+                                            "image_${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
+                                        )
+                                    }
+                                    listVideoUri.forEachIndexed { _, uri ->
+                                        saveVideoToGallery(
+                                            uri,
+                                            context,
+                                            "video_${title}-${LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))}"
+                                        )
+                                    }
+
+                                    // crear el item para guardar la tarea
+                                    val item = WorksData(
+                                        id = 0,
+                                        titlework = title,
+                                        descwork = desc,
+                                        datework = date,
+                                        hour = hourSelected,
+                                        images = listImageUri,
+                                        videos = listVideoUri,
+                                        audios = listAudioUri,
+                                        files = listFileUri
+                                    )
+
+                                    // generar la alarma para la tarea en 5 segundos
+                                    /*workAlarm(
+                                        context = context,
+                                        title = item.titlework,
+                                        longDesc = item.descwork,
+                                        expiration = item.hour,
+                                        time = 5000
+                                    )*/
+
+                                    // generar alarma para 5 minutos antes de que caduque la tarea
+                                    workAlarm(
+                                        context = context,
+                                        item = item,
+                                        expiration = item.hour
+                                    )
+
+                                    // agregar tarea a la base de datos
+                                    multiViewModel.addWork(item)
+                                } else {
+                                    val item = WorksData(
+                                        id = tarea.id,
+                                        titlework = title,
+                                        descwork = desc,
+                                        datework = date,
+                                        hour = hourSelected,
+                                        images = listImageUri,
+                                        videos = listVideoUri,
+                                        audios = listAudioUri,
+                                        files = listFileUri
+                                    )
+                                    if(title != tarea.titlework || desc != tarea.descwork || hourSelected != tarea.hour || date != tarea.datework){
+                                        multiViewModel.updateWork(item)
+                                    }
+                                }
+                                onClick()
+                            },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
+                                Text(
+                                    text = "Guardar",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.size(16.dp))
+
+                        // abrir archivos
+                        IconButton(
+                            onClick = { documentos = !documentos },
+                            modifier = Modifier
+                                .width(75.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.MoreVert,
+                                    contentDescription = null
+                                )
+                                Text(
+                                    text = "Galeria",
+                                    style = typography.bodySmall
+                                )
+                            }
+                        }
+
+                        // archivos
+                        if(documentos){
+
+                            // documentos
+                            IconButton(
+                                onClick = {
+                                    filePickerLauncher.launch("application/pdf")
+                                },
+                                modifier = Modifier
+                                    .width(75.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
+                                    Text(
+                                        text = "PDF",
+                                        style = typography.bodySmall
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    audioPickerLauncher.launch("audio/*")
+                                },
+                                modifier = Modifier
+                                    .width(75.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(imageVector = Icons.Outlined.Call, contentDescription = null)
+                                    Text(
+                                        text = "Audio",
+                                        style = typography.bodySmall
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    uri = ComposeFileProvider.getImageUri(context)
+                                    videoLauncher.launch(uri)
+                                },
+                                modifier = Modifier
+                                    .width(75.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(imageVector = Icons.Outlined.ThumbUp, contentDescription = null)
+                                    Text(
+                                        text = "Video",
+                                        style = typography.bodySmall
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    uri = ComposeFileProvider.getImageUri(context)
+                                    cameraLauncher.launch(uri)
+                                },
+                                modifier = Modifier
+                                    .width(75.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(imageVector = Icons.Outlined.AccountBox, contentDescription = null)
+                                    Text(
+                                        text = "Foto",
+                                        style = typography.bodySmall
+                                    )
+                                }
+                            }
                         }
                     }
                 }

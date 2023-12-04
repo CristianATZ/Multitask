@@ -35,9 +35,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.navigation.navArgument
 import net.cristianzvl.multitask.Room.NotesData
 import net.cristianzvl.multitask.Room.WorksData
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
+import net.cristianzvl.multitask.utils.MultiNavigationType
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -86,6 +88,7 @@ fun MultiDetailsScreenNotes(
 fun MultiDetailsScreenWorks(
     item: WorksData,
     multiViewModel: MultitaskViewModel,
+    navigationType: MultiNavigationType,
     changePreview: (WorksData) -> Unit
 ) {
     Card(
@@ -99,7 +102,7 @@ fun MultiDetailsScreenWorks(
                     DetailsScreenHeader(item.titlework,item.datework.toString())
                     DetailsScreenBody(item.descwork)
                     if(item.id != -1){
-                        DetailsScreenButtonsWorks(item, multiViewModel){ item ->
+                        DetailsScreenButtonsWorks(item, multiViewModel, navigationType){ item ->
                             changePreview(item)
                         }
                     }
@@ -162,8 +165,8 @@ fun DetailsScreenButtonsNotes(
         DialogAddNote(
             onClick = { openDialog = !openDialog },
             multiViewModel = multiViewModel,
-            nota = item,
-            update = true
+            update = true,
+            nota = item
         )
     }
 
@@ -206,7 +209,8 @@ fun DetailsScreenButtonsNotes(
 fun DetailsScreenButtonsWorks(
     item: WorksData,
     multiViewModel: MultitaskViewModel,
-    changePreview: (WorksData) -> Unit
+    navigationType: MultiNavigationType,
+    changePreview: (WorksData) -> Unit,
 ) {
 // mensaje
     val msg = buildAnnotatedString {
@@ -240,8 +244,9 @@ fun DetailsScreenButtonsWorks(
         DialogAddWork(
             onClick = { openDialog = !openDialog },
             multiViewModel = multiViewModel,
+            update = true,
             tarea = item,
-            update = true
+            navigationType = navigationType
         )
     }
 
