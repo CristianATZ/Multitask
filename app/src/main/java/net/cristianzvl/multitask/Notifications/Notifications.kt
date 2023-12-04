@@ -8,6 +8,8 @@ import android.content.Intent
 import android.os.Build
 import androidx.annotation.RequiresApi
 import net.cristianzvl.multitask.Notifications.AlarmNotification.Companion.NOTIFICACION_ID
+import net.cristianzvl.multitask.Room.WorksData
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
@@ -16,29 +18,34 @@ import java.util.Calendar
 @SuppressLint("ScheduleExactAlarm")
 fun workAlarm(
     context: Context,
-    title: String,
-    longDesc: String,
     expiration: LocalTime,
-    time: Long = 10000
+    item: WorksData
 ){
-    val intent = Intent(context, AlarmNotification::class.java)
-        .putExtra("title", title)
-        .putExtra("desc", longDesc)
+    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+    val exact = Calendar.getInstance().apply {
+        timeInMillis = System.currentTimeMillis()
+        set(Calendar.HOUR_OF_DAY, expiration.hour)
+        set(Calendar.MINUTE, expiration.minute)
+    }
+
+    val exactIntent = Intent(context, AlarmNotification::class.java)
+        .putExtra("title", item.titlework)
+        .putExtra("desc", item.descwork)
         .putExtra("time", expiration.format(DateTimeFormatter.ofPattern("HH:mm")))
 
 
-    val pendingIntent = PendingIntent.getBroadcast(
+    val exactPendingIntent = PendingIntent.getBroadcast(
         context,
         NOTIFICACION_ID,
-        intent,
+        exactIntent,
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     )
 
-    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
-    alarmManager.setExact(
+    alarmManager.setRepeating(
         AlarmManager.RTC_WAKEUP,
-        time,
-        pendingIntent
+        exact.timeInMillis,
+        1000 * 60,
+        exactPendingIntent
     )
 }

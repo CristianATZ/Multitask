@@ -1,10 +1,13 @@
 package net.cristianzvl.multitask
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,29 +22,151 @@ import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import net.cristianzvl.multitask.Room.NotesData
+import net.cristianzvl.multitask.Room.WorksData
+import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun MultiDetailsScreen(title: String, date: String, desc: String) {
+fun MultiDetailsScreenNotes(
+    item: NotesData,
+    multiViewModel: MultitaskViewModel,
+    changePreview: (NotesData) -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth(0.4f)
             .padding(PaddingValues(16.dp))
     ) {
-        LazyColumn {
-            item {
-                DetailsScreenHeader(title,date)
-                DetailsScreenBody(desc)
-                DetailsScreenButtons()
+        if(item.id != -1){
+            LazyColumn {
+                item {
+                    DetailsScreenHeader(item.titlenote,item.datenote.toString())
+                    DetailsScreenBody(item.descnote)
+                    if(item.id != -1){
+                        DetailsScreenButtonsNotes(item, multiViewModel){ item ->
+                            changePreview(item)
+                        }
+                    }
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "No hay elemento seleccionado.",
+                    style = typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DetailsScreenButtons() {
+fun MultiDetailsScreenWorks(
+    item: WorksData,
+    multiViewModel: MultitaskViewModel,
+    changePreview: (WorksData) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth(0.4f)
+            .padding(PaddingValues(16.dp))
+    ) {
+        if(item.id != -1){
+            LazyColumn {
+                item {
+                    DetailsScreenHeader(item.titlework,item.datework.toString())
+                    DetailsScreenBody(item.descwork)
+                    if(item.id != -1){
+                        DetailsScreenButtonsWorks(item, multiViewModel){ item ->
+                            changePreview(item)
+                        }
+                    }
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "No hay elemento seleccionado.",
+                    style = typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun DetailsScreenButtonsNotes(
+    item: NotesData,
+    multiViewModel: MultitaskViewModel,
+    changePreview: (NotesData) -> Unit
+) {
+// mensaje
+    val msg = buildAnnotatedString {
+        append(stringResource(id = R.string.lblConfirmarP1_notas) + " ")
+        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+            append(item.titlenote)
+        }
+        append(" " + stringResource(id = R.string.lblConfirmarP2_notas))
+    }
+
+    var openDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var eliminar by remember {
+        mutableStateOf(false)
+    }
+
+    if(eliminar){
+        DialogDeleteNote(
+            onDismiss = { eliminar = !eliminar },
+            item = item,
+            msg = msg,
+            multiViewModel = multiViewModel
+        ) { item ->
+            changePreview(item)
+        }
+    }
+
+    if(openDialog){
+        DialogAddNote(
+            onClick = { openDialog = !openDialog },
+            multiViewModel = multiViewModel,
+            nota = item,
+            update = true
+        )
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -49,7 +174,9 @@ fun DetailsScreenButtons() {
         horizontalArrangement = Arrangement.Center,
     ) {
         Button(
-            onClick = { /*TODO*/ }
+            onClick = {
+                openDialog = !openDialog
+            }
         ) {
             Text(
                 text = stringResource(id = R.string.edit_button)
@@ -59,7 +186,87 @@ fun DetailsScreenButtons() {
         Spacer(modifier = Modifier.size(8.dp))
 
         Button(
-            onClick = { /*TODO*/ },
+            onClick = {
+                eliminar = !eliminar
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colorScheme.error,
+                contentColor = colorScheme.onError
+            )
+        ) {
+            Text(
+                text = stringResource(id = R.string.delete_button)
+            )
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun DetailsScreenButtonsWorks(
+    item: WorksData,
+    multiViewModel: MultitaskViewModel,
+    changePreview: (WorksData) -> Unit
+) {
+// mensaje
+    val msg = buildAnnotatedString {
+        append(stringResource(id = R.string.lblConfirmarP1_notas) + " ")
+        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+            append(item.titlework)
+        }
+        append(" " + stringResource(id = R.string.lblConfirmarP2_notas))
+    }
+
+    var openDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var eliminar by remember {
+        mutableStateOf(false)
+    }
+
+    if(eliminar){
+        DialogDeleteWork(
+            onDismiss = { eliminar = !eliminar },
+            item = item,
+            msg = msg,
+            multiViewModel = multiViewModel
+        ) { item ->
+            changePreview(item)
+        }
+    }
+
+    if(openDialog){
+        DialogAddWork(
+            onClick = { openDialog = !openDialog },
+            multiViewModel = multiViewModel,
+            tarea = item,
+            update = true
+        )
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(PaddingValues(8.dp)),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Button(
+            onClick = {
+                openDialog = !openDialog
+            }
+        ) {
+            Text(
+                text = stringResource(id = R.string.edit_button)
+            )
+        }
+
+        Spacer(modifier = Modifier.size(8.dp))
+
+        Button(
+            onClick = {
+                eliminar = !eliminar
+            },
             colors = ButtonDefaults.buttonColors(
                 containerColor = colorScheme.error,
                 contentColor = colorScheme.onError

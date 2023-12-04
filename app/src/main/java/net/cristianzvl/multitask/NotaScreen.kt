@@ -47,7 +47,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
@@ -57,7 +56,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,7 +73,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
-import kotlinx.coroutines.launch
 import net.cristianzvl.multitask.Multimedia.AudioPlayer
 import net.cristianzvl.multitask.Multimedia.ComposeFileProvider
 import net.cristianzvl.multitask.Multimedia.DialogShowAudioSelected
@@ -85,7 +82,6 @@ import net.cristianzvl.multitask.Multimedia.DialogShowVideoTake
 import net.cristianzvl.multitask.Multimedia.VideoPlayer
 import net.cristianzvl.multitask.Notifications.createChannelNotification
 import net.cristianzvl.multitask.Room.NotesData
-import net.cristianzvl.multitask.Room.WorksData
 import net.cristianzvl.multitask.ViewModel.MultitaskViewModel
 import net.cristianzvl.multitask.utils.MultiNavigationType
 import java.time.LocalDate
@@ -98,9 +94,11 @@ fun NotaScreen(
     multiViewModel: MultitaskViewModel,
     navigationType: MultiNavigationType
 ) {
-    val scope = rememberCoroutineScope()
-    val snackbarHost = remember {
-        SnackbarHostState()
+
+    var preview by remember {
+        mutableStateOf(
+            NotesData(-1,"Preview titulo","Esta es la descripcion general de todo.", LocalDate.now(), emptyList(), emptyList(), emptyList(), emptyList())
+        )
     }
 
     val multiUiState by multiViewModel.uiState.collectAsState()
@@ -125,7 +123,9 @@ fun NotaScreen(
                     ){
                         items(notas_items.size){ index ->
                             val item = notas_items[index]
-                            NotaBody(item,multiViewModel)
+                            NotaBody(item,multiViewModel,navigationType){ item ->
+                                preview = item
+                            }
                         }
                     }
                 } else {
@@ -153,11 +153,12 @@ fun NotaScreen(
 
         // visualizacion previa
         if(navigationType == MultiNavigationType.NAVIGATION_RAIL){
-            MultiDetailsScreen(
-                title = "Titulo nota",
-                date = "Fecha nota",
-                desc = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."
-            )
+            MultiDetailsScreenNotes(
+                preview,
+                multiViewModel
+            ) { item ->
+                preview = item
+            }
         }
     }
 }
@@ -177,7 +178,9 @@ private fun TopBar() {
 @Composable
 fun NotaBody(
     item: NotesData,
-    multiViewModel: MultitaskViewModel
+    multiViewModel: MultitaskViewModel,
+    navigationType: MultiNavigationType,
+    changePreview: (NotesData) -> Unit
 ) {
 
     // mensaje
@@ -216,7 +219,9 @@ fun NotaBody(
             item = item,
             msg = msg,
             multiViewModel = multiViewModel
-        )
+        ) { item ->
+            changePreview(item)
+        }
     }
 
     if(showMultimedia){
@@ -231,10 +236,18 @@ fun NotaBody(
             .padding(vertical = 4.dp, horizontal = 16.dp)
             .combinedClickable(
                 onClick = {
-                    openDialog = !openDialog
+                    if (navigationType == MultiNavigationType.NAVIGATION_RAIL) {
+                        changePreview(item)
+                    } else {
+                        openDialog = !openDialog
+                    }
                 },
                 onLongClick = {
-                    eliminar = !eliminar
+                    if (navigationType == MultiNavigationType.NAVIGATION_RAIL) {
+                        changePreview(item)
+                    } else {
+                        eliminar = !eliminar
+                    }
                 },
                 onDoubleClick = {
                     showMultimedia = !showMultimedia
@@ -470,8 +483,12 @@ fun DialogShowMultimediaNote(
                                     .clickable {
                                         uri = item
                                         val intent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(uri, "application/pdf") // Cambia el tipo de MIME según el tipo de documento que estás mostrando
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                            setDataAndType(
+                                                uri,
+                                                "application/pdf"
+                                            ) // Cambia el tipo de MIME según el tipo de documento que estás mostrando
+                                            flags =
+                                                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                                         }
                                         context.startActivity(intent)
                                     },
@@ -493,7 +510,8 @@ fun DialogDeleteNote(
     multiViewModel: MultitaskViewModel,
     msg: AnnotatedString,
     onDismiss: () -> Unit,
-    item: NotesData
+    item: NotesData,
+    changePreview: (NotesData) -> Unit
 ) {
     Dialog(
         onDismissRequest = { onDismiss() }
@@ -513,6 +531,7 @@ fun DialogDeleteNote(
                 Button(
                     onClick = {
                         // eliminar
+                        changePreview(NotesData(-1,"Preview titulo","Esta es la descripcion general de todo", LocalDate.now(), emptyList(), emptyList(), emptyList(), emptyList()))
                         multiViewModel.deleteNote(item)
                         onDismiss()
                     },

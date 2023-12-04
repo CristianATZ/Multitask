@@ -100,6 +100,12 @@ import java.util.Calendar
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun TareaScreen(multiViewModel: MultitaskViewModel, navigationType: MultiNavigationType) {
+    var preview by remember {
+        mutableStateOf(
+            WorksData(-1,"Preview Tarea","Esta es la descripcion genera de todo.", LocalDate.now(), LocalTime.now(), emptyList(), emptyList(), emptyList(), emptyList())
+        )
+    }
+
     val multiUiState by multiViewModel.uiState.collectAsState()
 
     val tareasItems = multiUiState.works
@@ -129,7 +135,9 @@ fun TareaScreen(multiViewModel: MultitaskViewModel, navigationType: MultiNavigat
                         items(tareasItems.size){ index ->
                             val item = tareasItems[index]
                             if(item.datework >= LocalDate.now()){
-                                TareaBody(item,multiViewModel)
+                                TareaBody(item,multiViewModel,navigationType){
+                                    preview = item
+                                }
                             }
                         }
 
@@ -146,7 +154,9 @@ fun TareaScreen(multiViewModel: MultitaskViewModel, navigationType: MultiNavigat
                         items(tareasItems.size){ index ->
                             val item = tareasItems[index]
                             if(item.datework < LocalDate.now()){
-                                TareaBody(item,multiViewModel)
+                                TareaBody(item,multiViewModel,navigationType){
+                                    preview = item
+                                }
                             }
                         }
                     }
@@ -174,11 +184,12 @@ fun TareaScreen(multiViewModel: MultitaskViewModel, navigationType: MultiNavigat
         }
 
         if(navigationType == MultiNavigationType.NAVIGATION_RAIL){
-            MultiDetailsScreen(
-                title = "Titulo tarea",
-                date = "Fecha tarea",
-                desc = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."
-            )
+            MultiDetailsScreenWorks(
+                preview,
+                multiViewModel
+            ) { item ->
+                preview = item
+            }
         }
     }
 }
@@ -203,7 +214,7 @@ private fun FABody(
     }
 
     if(tarea){
-        DialogAddTarea(
+        DialogAddWork(
             multiViewModel = multiViewModel,
             onClick = {
                 tarea = !tarea
@@ -237,7 +248,9 @@ private fun FABody(
 @Composable
 private fun TareaBody(
     item: WorksData,
-    multiViewModel: MultitaskViewModel
+    multiViewModel: MultitaskViewModel,
+    navigationType: MultiNavigationType,
+    changePreview: (WorksData) -> Unit
 ) {
     val msg = buildAnnotatedString {
         append(stringResource(id = R.string.lblConfirmarP1_notas) + " ")
@@ -260,7 +273,7 @@ private fun TareaBody(
     }
 
     if(openDialog){
-        DialogAddTarea(
+        DialogAddWork(
             onClick = { openDialog = !openDialog },
             multiViewModel = multiViewModel,
             update = true,
@@ -274,7 +287,9 @@ private fun TareaBody(
             item = item,
             msg = msg,
             multiViewModel = multiViewModel
-        )
+        ) { item ->
+            changePreview(item)
+        }
     }
 
     if(showMultimedia){
@@ -289,10 +304,18 @@ private fun TareaBody(
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .combinedClickable(
                 onClick = {
-                    openDialog = !openDialog
+                    if (navigationType == MultiNavigationType.NAVIGATION_RAIL) {
+                        changePreview(item)
+                    } else {
+                        openDialog = !openDialog
+                    }
                 },
                 onLongClick = {
-                    eliminar = !eliminar
+                    if (navigationType == MultiNavigationType.NAVIGATION_RAIL) {
+                        changePreview(item)
+                    } else {
+                        eliminar = !eliminar
+                    }
                 },
                 onDoubleClick = {
                     showMultimedia = !showMultimedia
@@ -555,7 +578,8 @@ fun DialogDeleteWork(
     multiViewModel: MultitaskViewModel,
     msg: AnnotatedString,
     onDismiss: () -> Unit,
-    item: WorksData
+    item: WorksData,
+    changePreview: (WorksData) -> Unit
 ) {
     Dialog(
         onDismissRequest = { onDismiss() }
@@ -575,6 +599,7 @@ fun DialogDeleteWork(
                 Button(
                     onClick = {
                         // eliminar
+                        changePreview(WorksData(-1,"Preview Tarea","Esta es la descripcion genera de todo.", LocalDate.now(), LocalTime.now(), emptyList(), emptyList(), emptyList(), emptyList()))
                         multiViewModel.deleteWork(item)
                         onDismiss()
                     },
@@ -607,12 +632,13 @@ fun DialogDeleteWork(
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DialogAddTarea(
+fun DialogAddWork(
     onClick: () -> Unit,
     multiViewModel: MultitaskViewModel,
     update: Boolean = false,
     tarea: WorksData = WorksData(0,"","", LocalDate.now(), LocalTime.now(), emptyList(), emptyList(), emptyList(), emptyList())
 ) {
+
     // variables para en canal de notificacion
     val context = LocalContext.current
     val idCanal = "CanalTareas"
@@ -1071,13 +1097,20 @@ private fun DialogAddTarea(
                                     files = listFileUri
                                 )
 
-                                // generar la alarma para la tarea
-                                workAlarm(
+                                // generar la alarma para la tarea en 5 segundos
+                                /*workAlarm(
                                     context = context,
                                     title = item.titlework,
                                     longDesc = item.descwork,
                                     expiration = item.hour,
-                                    time = 10000
+                                    time = 5000
+                                )*/
+
+                                // generar alarma para 5 minutos antes de que caduque la tarea
+                                workAlarm(
+                                    context = context,
+                                    item = item,
+                                    expiration = item.hour
                                 )
 
                                 // agregar tarea a la base de datos
@@ -1096,13 +1129,6 @@ private fun DialogAddTarea(
                                 )
                                 if(title != tarea.titlework || desc != tarea.descwork || hourSelected != tarea.hour || date != tarea.datework){
                                     multiViewModel.updateWork(item)
-                                    workAlarm(
-                                        context = context,
-                                        title = item.titlework,
-                                        longDesc = item.descwork,
-                                        expiration = item.hour,
-                                        time = 10000
-                                    )
                                 }
                             }
                             onClick()
